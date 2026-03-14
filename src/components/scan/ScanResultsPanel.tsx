@@ -3,13 +3,13 @@ import type { VarlockLeak } from "@/lib/types";
 
 /**
  * ScanResultsPanel — displays results from `varlock scan`.
- * Shows grouped-by-file leak findings, clean state, or error state.
+ * macOS-style result cards grouped by file.
  */
 export function ScanResultsPanel() {
   const { state, result, error, dismissResults } = useScanStore();
 
   return (
-    <div className="flex-1 overflow-auto p-5 flex flex-col gap-4 bg-surface">
+    <div className="flex-1 overflow-auto p-5 flex flex-col gap-4 bg-surface animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -51,7 +51,7 @@ export function ScanResultsPanel() {
 function ScanningState() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-3">
-      <div className="w-10 h-10 rounded-full border-2 border-brand border-t-transparent animate-spin" />
+      <div className="w-10 h-10 rounded-full border-2 border-accent border-t-transparent animate-spin" />
       <p className="text-sm text-text-secondary">Running security scan...</p>
       <p className="text-xs text-text-muted">
         Checking project files for leaked secrets
@@ -62,8 +62,8 @@ function ScanningState() {
 
 function ErrorState({ error }: { error: string | null }) {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-4">
-      <div className="w-14 h-14 rounded-full bg-danger/20 border border-danger/30 flex items-center justify-center">
+    <div className="flex-1 flex flex-col items-center justify-center gap-4 animate-fade-in">
+      <div className="w-14 h-14 rounded-2xl bg-danger-light border border-danger/20 flex items-center justify-center shadow-sm">
         <svg
           width="24"
           height="24"
@@ -91,8 +91,8 @@ function ErrorState({ error }: { error: string | null }) {
 
 function CleanState() {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-4">
-      <div className="w-14 h-14 rounded-full bg-success/20 border border-success/30 flex items-center justify-center">
+    <div className="flex-1 flex flex-col items-center justify-center gap-4 animate-fade-in">
+      <div className="w-14 h-14 rounded-2xl bg-success-light border border-success/20 flex items-center justify-center shadow-sm">
         <svg
           width="24"
           height="24"
@@ -130,15 +130,14 @@ function FindingsView({
   leaks: VarlockLeak[];
   totalCount: number;
 }) {
-  // Group leaks by file
   const grouped = groupLeaksByFile(leaks);
   const fileNames = Object.keys(grouped).sort();
 
   return (
     <>
       {/* Summary banner */}
-      <div className="rounded-xl border border-danger/30 bg-danger-light/10 p-4 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-danger/20 flex items-center justify-center shrink-0">
+      <div className="rounded-xl border border-danger/20 bg-danger-light p-4 flex items-center gap-3 animate-fade-in">
+        <div className="w-8 h-8 rounded-lg bg-danger/15 flex items-center justify-center shrink-0">
           <svg
             width="16"
             height="16"
@@ -180,7 +179,7 @@ function FindingsView({
 
 function FileGroup({ file, leaks }: { file: string; leaks: VarlockLeak[] }) {
   return (
-    <div className="rounded-xl border border-border overflow-hidden">
+    <div className="rounded-xl border border-border-light overflow-hidden shadow-sm animate-fade-in">
       {/* File header */}
       <div className="px-4 py-2.5 bg-surface-secondary border-b border-border-light flex items-center gap-2">
         <svg
@@ -218,7 +217,7 @@ function LeakRow({ leak }: { leak: VarlockLeak }) {
   const severityStyle = getSeverityStyle(leak.severity);
 
   return (
-    <div className="px-4 py-2 border-b border-border-light last:border-b-0 flex items-center gap-3">
+    <div className="px-4 py-2 border-b border-border-light last:border-b-0 flex items-center gap-3 bg-surface">
       {/* Severity badge */}
       <span
         className="text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0"
@@ -259,14 +258,14 @@ function getSeverityStyle(severity: string): { bg: string; text: string } {
   switch (severity.toLowerCase()) {
     case "high":
     case "critical":
-      return { bg: "#FCEBEB", text: "#A32D2D" };
+      return { bg: "#FFEDED", text: "#A51D14" };
     case "medium":
     case "warning":
-      return { bg: "#FAEEDA", text: "#633806" };
+      return { bg: "#FFF4E5", text: "#8A4D00" };
     case "low":
     case "info":
-      return { bg: "#E6F1FB", text: "#185FA5" };
+      return { bg: "#E8F2FF", text: "#0A5DC2" };
     default:
-      return { bg: "#F1EFE8", text: "#5F5E5A" };
+      return { bg: "#F5F5F7", text: "#6E6E73" };
   }
 }

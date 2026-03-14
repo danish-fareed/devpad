@@ -3,7 +3,7 @@ import { ENV_BADGE_STYLES, DEFAULT_ENV_BADGE } from "@/lib/constants";
 
 /**
  * Tab bar for multiple terminal sessions.
- * Shows named tabs (env: command), active env badge, and running status.
+ * Compact macOS-style tab strip with env badge dot, active highlight, and status indicator.
  */
 export function TerminalTabs() {
   const { sessions, activeSessionId, setActiveSession, removeSession } =
@@ -12,25 +12,24 @@ export function TerminalTabs() {
   const activeSession = sessions.find((s) => s.id === activeSessionId);
 
   return (
-    <div className="flex items-center px-3.5 py-2.5 border-b border-border-light gap-3">
+    <div className="flex items-center px-3.5 py-1.5 border-b border-border-light gap-2 bg-surface shrink-0">
       {/* Tabs */}
       <div className="flex gap-1 overflow-x-auto" role="tablist" aria-label="Terminal sessions">
         {sessions.map((session) => {
           const badge = ENV_BADGE_STYLES[session.env] ?? DEFAULT_ENV_BADGE;
           const isActive = session.id === activeSessionId;
-          // Truncate command for tab display
           const shortCmd =
-            session.command.length > 24
-              ? session.command.slice(0, 24) + "..."
+            session.command.length > 20
+              ? session.command.slice(0, 20) + "..."
               : session.command;
 
           return (
             <div
               key={session.id}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-md transition-colors ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-md transition-colors ${
                 isActive
-                  ? "bg-brand text-white border-brand"
-                  : "bg-transparent text-text-secondary border-border-light hover:bg-surface-secondary"
+                  ? "bg-surface-tertiary text-text"
+                  : "bg-transparent text-text-secondary hover:bg-surface-secondary"
               }`}
             >
               <button
@@ -42,12 +41,10 @@ export function TerminalTabs() {
                 {/* Env badge dot */}
                 <span
                   className="w-1.5 h-1.5 rounded-full shrink-0"
-                  style={{
-                    background: isActive ? "currentColor" : badge.text,
-                  }}
+                  style={{ background: badge.text }}
                 />
-                <span className="truncate max-w-[140px]">
-                  {session.env}: {shortCmd}
+                <span className="truncate max-w-[120px] font-medium">
+                  {shortCmd}
                 </span>
               </button>
               {/* Close tab button */}
@@ -57,15 +54,11 @@ export function TerminalTabs() {
                   removeSession(session.id);
                 }}
                 aria-label={`Close ${session.env}: ${session.command}`}
-                className={`shrink-0 w-4 h-4 flex items-center justify-center rounded-sm cursor-pointer border-none bg-transparent ${
-                  isActive
-                    ? "text-white/60 hover:text-white hover:bg-white/15"
-                    : "text-text-muted hover:text-text hover:bg-surface-tertiary"
-                }`}
+                className="shrink-0 w-4 h-4 flex items-center justify-center rounded cursor-pointer border-none bg-transparent text-text-muted hover:text-text hover:bg-surface-tertiary"
               >
                 <svg
-                  width="8"
-                  height="8"
+                  width="7"
+                  height="7"
                   viewBox="0 0 8 8"
                   fill="none"
                   aria-hidden="true"
@@ -85,7 +78,7 @@ export function TerminalTabs() {
 
       {/* Running status */}
       {activeSession && (
-        <div className="ml-auto flex items-center gap-1.5 text-xs text-text-secondary shrink-0">
+        <div className="ml-auto flex items-center gap-1.5 text-[11px] text-text-secondary shrink-0">
           <div
             aria-label={`Session status: ${activeSession.status}`}
             className={`w-1.5 h-1.5 rounded-full ${
@@ -97,6 +90,11 @@ export function TerminalTabs() {
             }`}
           />
           {activeSession.status}
+          {activeSession.exitCode !== null && (
+            <span className="text-text-muted ml-0.5">
+              (code {activeSession.exitCode})
+            </span>
+          )}
         </div>
       )}
     </div>

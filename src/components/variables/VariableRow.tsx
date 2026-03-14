@@ -7,9 +7,7 @@ interface VariableRowProps {
 }
 
 /**
- * Single row in the variable list table.
- * Shows key, value (masked if sensitive), type badge, and status badge.
- * Uses MergedVariable which already includes hasSchema and metadata source info.
+ * Single variable row — macOS list item with hover states and clean typography.
  */
 export function VariableRow({ variable, onSelect }: VariableRowProps) {
   const typeBadge = TYPE_BADGE_STYLES[variable.type] ?? DEFAULT_TYPE_BADGE;
@@ -17,7 +15,7 @@ export function VariableRow({ variable, onSelect }: VariableRowProps) {
   const statusClass = !variable.valid
     ? "bg-danger-light text-danger-dark"
     : variable.sensitive
-      ? "bg-brand-light text-brand"
+      ? "bg-accent-light text-accent"
       : "bg-success-light text-success-dark";
 
   const statusLabel = !variable.valid
@@ -26,13 +24,12 @@ export function VariableRow({ variable, onSelect }: VariableRowProps) {
       ? "secret"
       : "valid";
 
-  // Display value: show "missing" for null, mask for sensitive
   const displayValue =
     variable.value === null ? (
       <span className="text-danger">— missing</span>
     ) : variable.sensitive ? (
-      <span className="text-brand bg-brand/5 px-1 rounded">
-        {"▒".repeat(Math.min(12, variable.value.length || 12))}
+      <span className="text-accent/60">
+        {"•".repeat(Math.min(16, variable.value.length || 12))}
       </span>
     ) : (
       variable.value
@@ -42,29 +39,29 @@ export function VariableRow({ variable, onSelect }: VariableRowProps) {
     <button
       type="button"
       onClick={() => onSelect?.(variable)}
-      className="w-full text-left grid grid-cols-[180px_1fr_80px_80px] px-3 py-2 gap-3 items-center hover:bg-surface-secondary transition-colors cursor-pointer"
+      className="w-full text-left grid grid-cols-[200px_1fr_80px_90px] px-4 py-2.5 gap-3 items-center hover:bg-surface-secondary/80 active:bg-surface-secondary transition-colors cursor-pointer border-none bg-transparent"
     >
       {/* Key */}
-      <div className="font-mono text-xs font-medium text-text truncate">
+      <div className="font-mono text-[12px] font-medium text-text truncate">
         {variable.key}
       </div>
 
       {/* Value */}
-      <div className="font-mono text-xs text-text-secondary truncate">
+      <div className="font-mono text-[12px] text-text-secondary truncate">
         {displayValue}
       </div>
 
-      {/* Type badge with inferred indicator */}
+      {/* Type badge */}
       <div className="flex items-center gap-1">
         <span
-          className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+          className="text-[10px] font-medium px-1.5 py-[2px] rounded-md"
           style={{ backgroundColor: typeBadge.bg, color: typeBadge.text }}
         >
           {variable.type}
         </span>
         {!variable.hasSchema && (
           <span
-            className="text-[9px] text-text-muted opacity-60"
+            className="text-[9px] text-text-muted"
             title="Type inferred — not confirmed in .env.schema"
           >
             *
@@ -75,7 +72,7 @@ export function VariableRow({ variable, onSelect }: VariableRowProps) {
       {/* Status badge */}
       <div className="flex justify-end">
         <span
-          className={`text-[10px] font-medium px-2 py-0.5 rounded-full truncate ${statusClass}`}
+          className={`text-[10px] font-medium px-1.5 py-[2px] rounded-md truncate ${statusClass}`}
         >
           {statusLabel}
         </span>

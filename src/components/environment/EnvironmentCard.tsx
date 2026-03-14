@@ -9,10 +9,11 @@ interface EnvironmentCardProps {
   secretCount: number;
   valid: boolean | null;
   onSelect: () => void;
+  style?: React.CSSProperties;
 }
 
 /**
- * Single environment card showing name, stats, and action buttons.
+ * Single environment card — macOS-style elevated card with subtle shadow.
  */
 export function EnvironmentCard({
   envName,
@@ -22,6 +23,7 @@ export function EnvironmentCard({
   secretCount,
   valid,
   onSelect,
+  style,
 }: EnvironmentCardProps) {
   const setView = useProjectStore((s) => s.setView);
   const badgeStyle = ENV_BADGE_STYLES[envName] ?? DEFAULT_ENV_BADGE;
@@ -36,24 +38,18 @@ export function EnvironmentCard({
     <button
       type="button"
       onClick={onSelect}
-      className={`relative border rounded-xl p-3.5 cursor-pointer transition-all bg-surface-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] ${
+      style={style}
+      className={`animate-fade-in relative border rounded-xl p-4 cursor-pointer transition-all bg-surface text-left ${
         isActive
-          ? "border-brand border-[1.5px] shadow-[0_0_0_1px_rgba(83,74,183,0.18)]"
-          : "border-border hover:border-brand/50 hover:bg-brand-light/5"
+          ? "border-accent shadow-[0_0_0_1px_rgba(10,132,255,0.2),0_4px_12px_rgba(10,132,255,0.08)]"
+          : "border-border-light shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:border-border"
       }`}
       aria-pressed={isActive}
     >
-      {/* Active label */}
-      {isActive && (
-        <span className="absolute -top-px right-3 text-[10px] font-medium text-brand bg-surface-secondary px-1">
-          active
-        </span>
-      )}
-
-      {/* Top row: badge + indicator */}
-      <div className="flex items-center justify-between mb-2.5">
+      {/* Top row: badge + status dot */}
+      <div className="flex items-center justify-between mb-3">
         <span
-          className="text-[11px] font-medium px-2 py-0.5 rounded-full"
+          className="text-[11px] font-medium px-2 py-[3px] rounded-md"
           style={{ backgroundColor: badgeStyle.bg, color: badgeStyle.text }}
         >
           {envName}
@@ -68,7 +64,7 @@ export function EnvironmentCard({
                   : "Environment has errors"
               : "Environment inactive"
           }
-          className={`w-[7px] h-[7px] rounded-full ${
+          className={`w-2 h-2 rounded-full transition-colors ${
             isActive
               ? valid === null
                 ? "bg-text-muted"
@@ -81,17 +77,17 @@ export function EnvironmentCard({
       </div>
 
       {/* File name */}
-      <div className="text-sm font-medium text-text mb-0.5">
+      <div className="text-[13px] font-medium text-text mb-0.5">
         .env.{envName}
       </div>
 
-      {/* Variable count */}
+      {/* Stats */}
       <div className="text-[11px] text-text-muted mb-3">
         {isLoading ? (
-          "Loading..."
+          <span className="animate-pulse-soft">Loading...</span>
         ) : isActive ? (
           <>
-            {variableCount} variable{variableCount !== 1 ? "s" : ""} ·{" "}
+            {variableCount} variable{variableCount !== 1 ? "s" : ""} &middot;{" "}
             {secretCount} secret{secretCount !== 1 ? "s" : ""}
           </>
         ) : (
@@ -103,10 +99,10 @@ export function EnvironmentCard({
       <div className="flex gap-1.5">
         <button
           onClick={handleLaunchTerminal}
-          className={`flex-1 py-1.5 text-[11px] rounded-md flex items-center justify-center gap-1 transition-colors cursor-pointer ${
+          className={`flex-1 h-7 text-[11px] font-medium rounded-md flex items-center justify-center gap-1 transition-all cursor-pointer border ${
             isActive
-              ? "bg-brand text-white hover:bg-brand-dark shadow-[0_8px_20px_rgba(83,74,183,0.24)]"
-              : "bg-transparent text-text-secondary border border-border hover:bg-surface"
+              ? "bg-accent text-white border-accent hover:bg-accent-hover"
+              : "bg-surface text-text-secondary border-border-light hover:bg-surface-secondary hover:text-text"
           }`}
         >
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
@@ -125,7 +121,7 @@ export function EnvironmentCard({
             e.stopPropagation();
             onSelect();
           }}
-          className="flex-1 py-1.5 text-[11px] rounded-md border border-border bg-transparent text-text-secondary hover:bg-surface transition-colors cursor-pointer"
+          className="flex-1 h-7 text-[11px] font-medium rounded-md border border-border-light bg-surface text-text-secondary hover:bg-surface-secondary hover:text-text transition-all cursor-pointer"
         >
           View vars
         </button>

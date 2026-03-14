@@ -5,40 +5,27 @@ import { useFileWatcher } from "@/hooks/useFileWatcher";
 import { EnvironmentCard } from "./EnvironmentCard";
 
 /**
- * Grid of environment cards for the active project.
- * Automatically loads environment data when project changes.
- * Watches for .env file changes on disk and auto-reloads.
+ * Grid of environment cards — macOS-style clean card layout.
  */
 export function EnvironmentCards() {
   const activeProject = useProjectStore((s) => s.activeProject);
   const { activeEnv, loadResult, isLoading, error, loadEnvironment, setActiveEnv } =
     useEnvironmentStore();
 
-  // Watch for .env file changes and auto-reload
   useFileWatcher(activeProject?.id, activeProject?.path);
 
-  // Guard against stale data when rapidly switching projects
   const loadIdRef = useRef(0);
 
-  // Load environment data when active project changes
   useEffect(() => {
     if (activeProject) {
       const loadId = ++loadIdRef.current;
-      loadEnvironment(activeProject.path).catch(() => {
-        // Error is already captured in the store
-      });
-      // If a newer load has started, this one's result is stale
-      // (the store will have the latest result anyway, but this prevents
-      // any follow-up actions based on an outdated load)
-      void loadId; // acknowledgment -- the store handles state
+      loadEnvironment(activeProject.path).catch(() => {});
+      void loadId;
     }
   }, [activeProject, loadEnvironment]);
 
   if (!activeProject) return null;
-
-  if (activeProject.status === "migrationNeeded") {
-    return null;
-  }
+  if (activeProject.status === "migrationNeeded") return null;
 
   const environments = activeProject.environments;
 
@@ -51,30 +38,30 @@ export function EnvironmentCards() {
 
   return (
     <div>
-      <h3 className="text-xs font-medium text-text-secondary tracking-wider mb-3">
-        ENVIRONMENTS
+      <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-3">
+        Environments
       </h3>
 
       {error && (
-        <div className="bg-danger-light text-danger-dark text-xs px-3 py-2 rounded-lg mb-3">
+        <div className="bg-danger-light text-danger-dark text-[12px] px-3 py-2.5 rounded-lg mb-3">
           {error}
         </div>
       )}
 
       {environments.length === 0 && !isLoading && (
-        <div className="text-xs text-text-muted py-4 text-center">
+        <div className="text-[13px] text-text-muted py-6 text-center">
           No environments found in this project.
         </div>
       )}
 
       {isLoading && !loadResult && (
-        <div className="text-xs text-text-muted py-4 text-center">
+        <div className="text-[13px] text-text-muted py-6 text-center animate-pulse-soft">
           Loading environments...
         </div>
       )}
 
       <div className="grid grid-cols-3 gap-3">
-        {environments.map((env) => (
+        {environments.map((env, i) => (
           <EnvironmentCard
             key={env}
             envName={env}
@@ -90,6 +77,7 @@ export function EnvironmentCards() {
             }
             valid={activeEnv === env ? loadResult?.valid ?? null : null}
             onSelect={() => handleEnvSelect(env)}
+            style={{ animationDelay: `${i * 40}ms` }}
           />
         ))}
       </div>

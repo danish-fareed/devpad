@@ -8,21 +8,21 @@ const FILTERS = [
 ];
 
 /**
- * Filter pill buttons for the variable list.
+ * macOS-style segmented filter pills for the variable list.
  */
 export function VariableFilters() {
   const { filter, setFilter } = useEnvironmentStore();
 
   return (
-    <div className="flex gap-1.5">
+    <div className="flex bg-surface-tertiary rounded-lg p-[2px] gap-0.5">
       {FILTERS.map((f) => (
         <button
           key={f.key}
           onClick={() => setFilter(f.key)}
-          className={`text-[11px] px-3 py-1 rounded-full border transition-colors cursor-pointer ${
+          className={`text-[11px] font-medium px-2.5 py-[3px] rounded-md transition-all cursor-pointer border-none ${
             filter === f.key
-              ? "bg-brand-light text-brand border-brand-muted"
-              : "bg-transparent text-text-secondary border-border hover:bg-surface-secondary"
+              ? "bg-surface text-text shadow-[0_1px_2px_rgba(0,0,0,0.06)]"
+              : "bg-transparent text-text-secondary hover:text-text"
           }`}
         >
           {f.label}

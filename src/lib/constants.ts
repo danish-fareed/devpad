@@ -1,53 +1,53 @@
 /** Terminal font configuration */
 export const TERMINAL_FONT_FAMILY =
-  '"Cascadia Code", "Fira Code", "JetBrains Mono", "Menlo", "Consolas", monospace';
+  '"Geist Mono", "SF Mono", "Cascadia Code", "Fira Code", "JetBrains Mono", monospace';
 export const TERMINAL_FONT_SIZE = 13;
 
-/** Terminal theme matching the mockup dark background */
+/** Terminal theme — macOS Terminal.app inspired light-on-dark */
 export const TERMINAL_THEME = {
-  background: "#1a1a18",
-  foreground: "#e8e6df",
-  cursor: "#97C459",
-  cursorAccent: "#1a1a18",
-  selectionBackground: "#534AB740",
-  selectionForeground: "#e8e6df",
-  black: "#1a1a18",
-  red: "#F09595",
-  green: "#97C459",
-  yellow: "#EF9F27",
-  blue: "#85B7EB",
-  magenta: "#AFA9EC",
-  cyan: "#7EC4CF",
-  white: "#e8e6df",
-  brightBlack: "#555",
-  brightRed: "#F09595",
-  brightGreen: "#97C459",
-  brightYellow: "#EF9F27",
-  brightBlue: "#85B7EB",
-  brightMagenta: "#AFA9EC",
-  brightCyan: "#7EC4CF",
-  brightWhite: "#ffffff",
+  background: "#1C1C1E",
+  foreground: "#E5E5EA",
+  cursor: "#0A84FF",
+  cursorAccent: "#1C1C1E",
+  selectionBackground: "rgba(10,132,255,0.25)",
+  selectionForeground: "#E5E5EA",
+  black: "#1C1C1E",
+  red: "#FF453A",
+  green: "#30D158",
+  yellow: "#FFD60A",
+  blue: "#0A84FF",
+  magenta: "#BF5AF2",
+  cyan: "#64D2FF",
+  white: "#E5E5EA",
+  brightBlack: "#636366",
+  brightRed: "#FF6961",
+  brightGreen: "#4CD964",
+  brightYellow: "#FFD60A",
+  brightBlue: "#409CFF",
+  brightMagenta: "#DA8FFF",
+  brightCyan: "#70D7FF",
+  brightWhite: "#FFFFFF",
 } as const;
 
 /** Color mapping for project status indicators */
 export const STATUS_COLORS = {
-  valid: "#639922",
-  warning: "#BA7517",
-  error: "#E24B4A",
-  migrationNeeded: "#185FA5",
-  unknown: "#888888",
+  valid: "#34C759",
+  warning: "#FF9500",
+  error: "#FF3B30",
+  migrationNeeded: "#0A84FF",
+  unknown: "#AEAEB2",
 } as const;
 
-/** Environment badge colors */
+/** Environment badge colors — soft pastels with readable text */
 export const ENV_BADGE_STYLES: Record<
   string,
   { bg: string; text: string }
 > = {
-  development: { bg: "#E1F5EE", text: "#0F6E56" },
-  production: { bg: "#FCEBEB", text: "#A32D2D" },
-  test: { bg: "#FAEEDA", text: "#633806" },
-  staging: { bg: "#E6F1FB", text: "#185FA5" },
-  preview: { bg: "#EEEDFE", text: "#534AB7" },
+  development: { bg: "#E8FAE9", text: "#1E7A2E" },
+  production: { bg: "#FFEDED", text: "#A51D14" },
+  test: { bg: "#FFF4E5", text: "#8A4D00" },
+  staging: { bg: "#E8F2FF", text: "#0055B3" },
+  preview: { bg: "#F3EDFF", text: "#6E36D6" },
 };
 
 /** Variable type badge colors */
@@ -55,16 +55,16 @@ export const TYPE_BADGE_STYLES: Record<
   string,
   { bg: string; text: string }
 > = {
-  url: { bg: "#E6F1FB", text: "#185FA5" },
-  string: { bg: "#F1EFE8", text: "#5F5E5A" },
-  port: { bg: "#E1F5EE", text: "#0F6E56" },
-  enum: { bg: "#FAEEDA", text: "#633806" },
-  number: { bg: "#EEEDFE", text: "#534AB7" },
-  boolean: { bg: "#E1F5EE", text: "#0F6E56" },
+  url: { bg: "#E8F2FF", text: "#0055B3" },
+  string: { bg: "#F0F0F2", text: "#6E6E73" },
+  port: { bg: "#E8FAE9", text: "#1E7A2E" },
+  enum: { bg: "#FFF4E5", text: "#8A4D00" },
+  number: { bg: "#F3EDFF", text: "#6E36D6" },
+  boolean: { bg: "#E8FAE9", text: "#1E7A2E" },
 };
 
 /** Default environment badge style for unknown environments */
-export const DEFAULT_ENV_BADGE = { bg: "#F1EFE8", text: "#5F5E5A" };
+export const DEFAULT_ENV_BADGE = { bg: "#F0F0F2", text: "#6E6E73" };
 
 /** Default type badge style for unknown types */
-export const DEFAULT_TYPE_BADGE = { bg: "#F1EFE8", text: "#5F5E5A" };
+export const DEFAULT_TYPE_BADGE = { bg: "#F0F0F2", text: "#6E6E73" };

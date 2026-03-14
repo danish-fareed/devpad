@@ -54,7 +54,7 @@ function getFileValueStatus(
 const FILE_STATUS_STYLES: Record<string, { label: string; className: string }> = {
   source: { label: "active source", className: "bg-success-light text-success-dark" },
   override: { label: "override", className: "bg-warning-light text-warning-dark" },
-  inherited: { label: "inherited", className: "bg-brand-light text-brand" },
+  inherited: { label: "inherited", className: "bg-accent-light text-accent" },
   missing: { label: "not set", className: "bg-surface-tertiary text-text-muted" },
   empty: { label: "empty", className: "bg-warning-light text-warning-dark" },
 };
@@ -223,7 +223,6 @@ export function VariableDetailDrawer({
     if (schemaContent && variable.schema) {
       nextSchemaContent = updateSchemaEntry(schemaContent, updatedEntry);
     } else if (schemaContent) {
-      // Append new entry
       const block = serializeSchemaEntry(updatedEntry);
       const lineEnding = schemaContent.includes("\r\n") ? "\r\n" : "\n";
       const hasTrailing = schemaContent.endsWith("\n");
@@ -273,7 +272,7 @@ export function VariableDetailDrawer({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/45 backdrop-blur-[1px]">
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/25 backdrop-blur-sm">
       <button
         type="button"
         aria-label="Close variable detail"
@@ -287,7 +286,7 @@ export function VariableDetailDrawer({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="h-full w-full max-w-[560px] border-l border-border bg-surface shadow-[-24px_0_80px_rgba(0,0,0,0.35)] flex flex-col"
+        className="h-full w-full max-w-[560px] border-l border-border-light bg-surface shadow-lg flex flex-col animate-slide-in-right"
       >
         {/* ── Header ── */}
         <div className="px-5 py-4 border-b border-border-light flex items-start justify-between gap-4">
@@ -306,10 +305,10 @@ export function VariableDetailDrawer({
             ref={closeButtonRef}
             type="button"
             onClick={requestClose}
-            className="text-text-muted hover:text-text transition-colors cursor-pointer shrink-0 mt-1"
+            className="text-text-muted hover:text-text transition-colors cursor-pointer shrink-0 mt-1 w-6 h-6 flex items-center justify-center rounded-md hover:bg-surface-tertiary"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </button>
         </div>
@@ -332,7 +331,7 @@ export function VariableDetailDrawer({
               {variable.required ? "required" : "optional"}
             </span>
             {variable.sensitive && (
-              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-brand-light text-brand">
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent-light text-accent">
                 sensitive
               </span>
             )}
@@ -362,25 +361,25 @@ export function VariableDetailDrawer({
             <button
               type="button"
               onClick={() => setShowSecret((v) => !v)}
-              className="text-xs text-brand hover:text-brand-dark transition-colors cursor-pointer mt-2"
+              className="text-xs text-accent hover:text-accent-hover transition-colors cursor-pointer mt-2"
             >
               {showSecret ? "Hide resolved value" : "Reveal resolved value"}
             </button>
           )}
         </div>
 
-        {/* ── Tab bar ── */}
-        <div className="px-5 border-b border-border-light" role="tablist">
-          <div className="flex gap-1">
+        {/* ── Tab bar (macOS segmented control) ── */}
+        <div className="px-5 py-2.5 border-b border-border-light" role="tablist">
+          <div className="flex bg-surface-tertiary rounded-lg p-0.5">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 role="tab"
                 aria-selected={activeTab === tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-3 py-2.5 text-xs font-medium transition-colors cursor-pointer relative ${
+                className={`flex-1 px-3 py-1.5 text-xs font-medium transition-all cursor-pointer rounded-md ${
                   activeTab === tab.id
-                    ? "text-text"
+                    ? "bg-surface text-text shadow-sm"
                     : "text-text-muted hover:text-text-secondary"
                 }`}
               >
@@ -389,9 +388,6 @@ export function VariableDetailDrawer({
                   <span className="ml-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-danger-light text-danger-dark">
                     {tab.badge}
                   </span>
-                )}
-                {activeTab === tab.id && (
-                  <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-brand rounded-t" />
                 )}
               </button>
             ))}
@@ -434,14 +430,14 @@ export function VariableDetailDrawer({
           )}
 
           {saveError && (
-            <div className="mt-4 rounded-xl border border-danger/25 bg-danger-light/10 px-3 py-3 text-sm text-danger-dark">
+            <div className="mt-4 rounded-xl border border-danger/20 bg-danger-light px-3 py-3 text-sm text-danger-dark">
               {saveError}
             </div>
           )}
         </div>
 
         {/* ── Footer ── */}
-        <div className="px-5 py-4 border-t border-border-light flex items-center justify-between gap-3 bg-surface-secondary/70">
+        <div className="px-5 py-4 border-t border-border-light flex items-center justify-between gap-3 bg-surface-secondary">
           <div className="text-xs text-text-muted">
             {isDirty ? (
               <span className="text-warning">
@@ -468,7 +464,7 @@ export function VariableDetailDrawer({
               type="button"
               disabled={!isDirty || isSaving}
               onClick={handleSaveAll}
-              className="px-4 py-2 rounded-lg bg-brand text-white text-xs font-medium hover:bg-brand-dark disabled:opacity-50 transition-colors cursor-pointer"
+              className="px-4 py-2 rounded-lg bg-accent text-white text-xs font-medium hover:bg-accent-hover disabled:opacity-50 transition-colors cursor-pointer shadow-sm"
             >
               {isSaving ? "Saving..." : "Save and reload"}
             </button>
@@ -513,7 +509,7 @@ function SchemaTab({
   return (
     <div className="space-y-5">
       {/* Source indicator */}
-      <div className="rounded-xl border border-border-light bg-surface-secondary/70 px-3 py-3">
+      <div className="rounded-xl border border-border-light bg-surface-secondary px-3 py-3">
         <div className="flex items-center gap-2">
           <span
             className={`inline-block w-2 h-2 rounded-full ${
@@ -535,7 +531,7 @@ function SchemaTab({
           value={draftDescription}
           onChange={(e) => onDescriptionChange(e.target.value)}
           rows={2}
-          className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-brand resize-none"
+          className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-accent resize-none transition-colors"
           placeholder="Brief description of this variable's purpose"
         />
       </label>
@@ -551,7 +547,7 @@ function SchemaTab({
         <select
           value={draftType}
           onChange={(e) => onTypeChange(e.target.value as SchemaVarType)}
-          className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-brand"
+          className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-accent transition-colors"
         >
           {SCHEMA_TYPES.map((t) => (
             <option key={t} value={t}>
@@ -570,7 +566,7 @@ function SchemaTab({
           <input
             value={draftEnumValues}
             onChange={(e) => onEnumValuesChange(e.target.value)}
-            className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-text font-mono outline-none focus:border-brand"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text font-mono outline-none focus:border-accent transition-colors"
             placeholder="value1, value2, value3"
           />
         </label>
@@ -596,7 +592,7 @@ function SchemaTab({
 
       {/* Base value from schema */}
       {hasSchema && (
-        <div className="rounded-xl border border-border-light bg-surface-secondary/60 px-3 py-3">
+        <div className="rounded-xl border border-border-light bg-surface-secondary px-3 py-3">
           <div className="text-[11px] uppercase tracking-wider text-text-muted mb-1">
             Schema default value
           </div>
@@ -607,9 +603,9 @@ function SchemaTab({
       )}
 
       {/* Schema preview */}
-      <div className="rounded-xl border border-border-light bg-[#0d1117] px-4 py-3">
-        <div className="text-[11px] uppercase tracking-wider text-text-muted mb-2">Preview</div>
-        <pre className="text-xs font-mono text-[#B5CEE6] leading-5 whitespace-pre-wrap">
+      <div className="rounded-xl border border-border-light bg-[#1C1C1E] px-4 py-3">
+        <div className="text-[11px] uppercase tracking-wider text-[#98989D] mb-2">Preview</div>
+        <pre className="text-xs font-mono text-[#E5E5EA] leading-5 whitespace-pre-wrap">
           {serializeSchemaEntry({
             key: variable.key,
             baseValue: variable.schema?.baseValue ?? variable.resolvedValue ?? "",
@@ -651,19 +647,19 @@ function ToggleField({ label, description, checked, onChange, sourceLabel }: Tog
       onClick={() => onChange(!checked)}
       className={`rounded-xl border px-3 py-3 text-left transition-colors cursor-pointer ${
         checked
-          ? "border-brand/40 bg-brand/5"
-          : "border-border-light bg-surface-secondary/60 hover:border-border"
+          ? "border-accent/30 bg-accent-light/50"
+          : "border-border-light bg-surface-secondary hover:border-border"
       }`}
     >
       <div className="flex items-center justify-between mb-1">
         <span className="text-xs font-medium text-text">{label}</span>
         <span
           className={`w-8 h-4.5 rounded-full transition-colors relative ${
-            checked ? "bg-brand" : "bg-border"
+            checked ? "bg-accent" : "bg-border"
           }`}
         >
           <span
-            className={`absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-transform ${
+            className={`absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-transform shadow-sm ${
               checked ? "translate-x-4" : "translate-x-0.5"
             }`}
           />
@@ -724,7 +720,7 @@ function EnvironmentTab({
                     idx > 0 ? "border-t border-border-light" : ""
                   } ${
                     selectedFile === row.relativePath
-                      ? "bg-brand/5"
+                      ? "bg-accent-light/50"
                       : "hover:bg-surface-secondary"
                   }`}
                 >
@@ -747,7 +743,7 @@ function EnvironmentTab({
       </div>
 
       {/* Edit selected file */}
-      <div className="rounded-2xl border border-border-light bg-surface-secondary/60 p-4 space-y-4">
+      <div className="rounded-2xl border border-border-light bg-surface-secondary p-4 space-y-4">
         <div>
           <div className="text-[11px] uppercase tracking-wider text-text-muted mb-1">
             Edit value
@@ -763,7 +759,7 @@ function EnvironmentTab({
             <select
               value={selectedFile}
               onChange={(e) => onSelectFile(e.target.value)}
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-brand"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-accent transition-colors"
             >
               {envFiles.map((file) => (
                 <option key={file.relativePath} value={file.relativePath}>
@@ -773,7 +769,7 @@ function EnvironmentTab({
               ))}
             </select>
           ) : (
-            <div className="rounded-xl border border-danger/25 bg-danger-light/10 px-3 py-3 text-sm text-danger-dark">
+            <div className="rounded-xl border border-danger/20 bg-danger-light px-3 py-3 text-sm text-danger-dark">
               No editable .env files are available for this project yet.
             </div>
           )}
@@ -785,7 +781,7 @@ function EnvironmentTab({
             value={draftValue}
             onChange={(e) => onDraftValueChange(e.target.value)}
             spellCheck={false}
-            className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-text font-mono outline-none focus:border-brand"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text font-mono outline-none focus:border-accent transition-colors"
             placeholder="Enter the value to store in this file"
           />
         </label>
@@ -818,8 +814,8 @@ function ValidationTab({ variable }: { variable: EditableVariable }) {
       <div
         className={`rounded-xl border px-3 py-3 flex items-center gap-2 ${
           variable.valid
-            ? "border-success/25 bg-success-light/10"
-            : "border-danger/25 bg-danger-light/10"
+            ? "border-success/20 bg-success-light"
+            : "border-danger/20 bg-danger-light"
         }`}
       >
         <span
@@ -842,7 +838,7 @@ function ValidationTab({ variable }: { variable: EditableVariable }) {
             {variable.errors.map((error, idx) => (
               <div
                 key={idx}
-                className="rounded-xl border border-danger/25 bg-danger-light/10 px-3 py-2.5 text-sm text-danger-dark leading-5"
+                className="rounded-xl border border-danger/20 bg-danger-light px-3 py-2.5 text-sm text-danger-dark leading-5"
               >
                 {error}
               </div>
@@ -861,7 +857,7 @@ function ValidationTab({ variable }: { variable: EditableVariable }) {
             {variable.warnings.map((warning, idx) => (
               <div
                 key={idx}
-                className="rounded-xl border border-warning/25 bg-warning-light/10 px-3 py-2.5 text-sm text-warning-dark leading-5"
+                className="rounded-xl border border-warning/20 bg-warning-light px-3 py-2.5 text-sm text-warning-dark leading-5"
               >
                 {warning}
               </div>
@@ -910,7 +906,7 @@ function MetadataSourceRow({
   source: "schema" | "inferred";
 }) {
   return (
-    <div className="flex items-center justify-between px-3 py-2 border-b border-border-light last:border-b-0">
+    <div className="flex items-center justify-between px-3 py-2 border-b border-border-light last:border-b-0 bg-surface">
       <div className="flex items-center gap-2">
         <span className="text-xs text-text-secondary">{label}</span>
         <span className="text-xs font-mono text-text">{value}</span>

@@ -34,12 +34,12 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
 };
 
 const ROLE_DOT_COLORS: Record<string, { bg: string; dot: string }> = {
-  "schema-seed": { bg: "#E1F5EE", dot: "#0F6E56" },
-  "shared-defaults": { bg: "#FAEEDA", dot: "#854F0B" },
-  "local-overrides": { bg: "#FCEBEB", dot: "#A32D2D" },
-  environment: { bg: "#E6F1FB", dot: "#185FA5" },
-  schema: { bg: "#EEEDFE", dot: "#534AB7" },
-  unknown: { bg: "#F1EFE8", dot: "#5F5E5A" },
+  "schema-seed": { bg: "#E8FAE9", dot: "#1E7A2E" },
+  "shared-defaults": { bg: "#FFF4E5", dot: "#8A4D00" },
+  "local-overrides": { bg: "#FFEDED", dot: "#A51D14" },
+  environment: { bg: "#E8F2FF", dot: "#0A5DC2" },
+  schema: { bg: "#E8F2FF", dot: "#0A84FF" },
+  unknown: { bg: "#F5F5F7", dot: "#6E6E73" },
 };
 
 // ── Badge styles for inferred types ──
@@ -47,21 +47,21 @@ const ROLE_DOT_COLORS: Record<string, { bg: string; dot: string }> = {
 function getTypeBadgeStyle(type: string): { bg: string; text: string } {
   switch (type) {
     case "url":
-      return { bg: "#E6F1FB", text: "#185FA5" };
+      return { bg: "#E8F2FF", text: "#0A5DC2" };
     case "port":
-      return { bg: "#E1F5EE", text: "#0F6E56" };
+      return { bg: "#E8FAE9", text: "#1E7A2E" };
     case "boolean":
-      return { bg: "#E1F5EE", text: "#0F6E56" };
+      return { bg: "#E8FAE9", text: "#1E7A2E" };
     case "number":
-      return { bg: "#EEEDFE", text: "#534AB7" };
+      return { bg: "#E8F2FF", text: "#0A5DC2" };
     case "enum":
-      return { bg: "#FAEEDA", text: "#633806" };
+      return { bg: "#FFF4E5", text: "#8A4D00" };
     case "email":
-      return { bg: "#E6F1FB", text: "#185FA5" };
+      return { bg: "#E8F2FF", text: "#0A5DC2" };
     case "path":
-      return { bg: "#F1EFE8", text: "#5F5E5A" };
+      return { bg: "#F5F5F7", text: "#6E6E73" };
     default:
-      return { bg: "#F1EFE8", text: "#5F5E5A" };
+      return { bg: "#F5F5F7", text: "#6E6E73" };
   }
 }
 
@@ -82,7 +82,6 @@ export function MigrationWizard() {
   const [createBackups, setCreateBackups] = useState(true);
   const [editedSchemaPreview, setEditedSchemaPreview] = useState<string>("");
 
-  // Auto-advance: load the migration plan on mount since project is already selected
   useEffect(() => {
     if (activeProject?.path) {
       loadPlan();
@@ -98,7 +97,6 @@ export function MigrationWizard() {
       const result = await commands.migrationPlan(activeProject.path);
       setPlan(result);
       setEditedSchemaPreview(result.schemaPreview);
-      // Auto-advance to Migrate step once plan is loaded
       setCurrentStep(1);
     } catch (e) {
       setError(String(e));
@@ -124,7 +122,6 @@ export function MigrationWizard() {
         return;
       }
 
-      // Run varlock init to finalize the setup
       try {
         await commands.varlockInit(activeProject.path);
       } catch {
@@ -132,7 +129,7 @@ export function MigrationWizard() {
       }
 
       setApplyResult(result);
-      setCurrentStep(3); // Done step
+      setCurrentStep(3);
     } catch (e) {
       setError(String(e));
     } finally {
@@ -141,7 +138,6 @@ export function MigrationWizard() {
   }, [activeProject?.path, editedSchemaPreview, createBackups]);
 
   const handleFinish = useCallback(async () => {
-    // Refresh the project so it moves to "valid" or "unknown" status
     await refreshActiveProject();
     await loadCurrentEnvironment();
   }, [refreshActiveProject, loadCurrentEnvironment]);
@@ -149,8 +145,8 @@ export function MigrationWizard() {
   const stepName = STEPS[currentStep] ?? "Locate";
 
   return (
-    <div className="flex-1 overflow-auto p-5 flex flex-col bg-surface">
-      <div className="rounded-2xl border border-border overflow-hidden bg-surface flex flex-col min-h-[540px] shadow-[0_16px_40px_rgba(0,0,0,0.18)]">
+    <div className="flex-1 overflow-auto p-5 flex flex-col bg-surface animate-fade-in">
+      <div className="rounded-2xl border border-border-light overflow-hidden bg-surface flex flex-col min-h-[540px] shadow-lg">
         {/* Header with stepper */}
         <WizardHeader currentStep={currentStep} />
 
@@ -159,7 +155,7 @@ export function MigrationWizard() {
           {error && (
             <div className="absolute top-0 left-0 right-0 mx-5 mt-2">
               <div
-                className="bg-danger-light text-danger-dark text-xs px-3 py-2 rounded-lg"
+                className="bg-danger-light text-danger-dark text-xs px-3 py-2 rounded-lg border border-danger/15"
                 role="alert"
               >
                 {error}
@@ -230,7 +226,7 @@ export function MigrationWizard() {
 
 function WizardHeader({ currentStep }: { currentStep: number }) {
   return (
-    <div className="px-5 py-4 border-b border-border-light flex items-center gap-3">
+    <div className="px-5 py-4 border-b border-border-light flex items-center gap-3 bg-surface">
       <h2 className="text-[15px] font-medium text-text flex-1">
         Migrate to Varlock
       </h2>
@@ -276,21 +272,21 @@ function StepIndicator({
       className="w-[22px] h-[22px] rounded-full flex items-center justify-center text-[11px] font-medium shrink-0"
       style={{
         background: isDone
-          ? "#639922"
+          ? "#34C759"
           : isActive
-            ? "#534AB7"
+            ? "#0A84FF"
             : "transparent",
         borderColor: isDone
-          ? "#639922"
+          ? "#34C759"
           : isActive
-            ? "#534AB7"
+            ? "#0A84FF"
             : "var(--color-border)",
         borderWidth: "1px",
         borderStyle: "solid",
         color: isDone
-          ? "#EAF3DE"
+          ? "#FFFFFF"
           : isActive
-            ? "#EEEDFE"
+            ? "#FFFFFF"
             : "var(--color-text-muted)",
       }}
     >
@@ -339,7 +335,7 @@ function WizardFooter({
   const stepName = STEPS[currentStep] ?? "Locate";
 
   return (
-    <div className="px-5 py-3.5 border-t border-border-light flex items-center gap-2.5">
+    <div className="px-5 py-3.5 border-t border-border-light flex items-center gap-2.5 bg-surface-secondary">
       <div className="text-[11px] text-text-muted flex-1">
         {stepName === "Locate" &&
           "Select a project to analyze its environment files"}
@@ -364,7 +360,7 @@ function WizardFooter({
         <button
           onClick={onNext}
           disabled={loading || !plan}
-          className="px-4 py-1.5 text-xs text-white bg-brand border border-brand rounded-lg hover:bg-brand-dark disabled:opacity-50 transition-colors cursor-pointer"
+          className="px-4 py-1.5 text-xs text-white bg-accent rounded-lg hover:bg-accent-hover disabled:opacity-50 transition-colors cursor-pointer shadow-sm"
         >
           Continue
         </button>
@@ -374,7 +370,7 @@ function WizardFooter({
         <button
           onClick={onApply}
           disabled={loading || !plan}
-          className="px-4 py-1.5 text-xs text-white bg-brand border border-brand rounded-lg hover:bg-brand-dark disabled:opacity-50 transition-colors cursor-pointer"
+          className="px-4 py-1.5 text-xs text-white bg-accent rounded-lg hover:bg-accent-hover disabled:opacity-50 transition-colors cursor-pointer shadow-sm"
         >
           {loading ? "Applying..." : "Apply migration"}
         </button>
@@ -383,7 +379,7 @@ function WizardFooter({
       {stepName === "Done" && (
         <button
           onClick={onFinish}
-          className="px-4 py-1.5 text-xs text-white bg-success border border-success rounded-lg hover:bg-success-dark transition-colors cursor-pointer"
+          className="px-4 py-1.5 text-xs text-white bg-success rounded-lg hover:bg-success-dark transition-colors cursor-pointer shadow-sm"
         >
           Go to dashboard
         </button>
@@ -407,13 +403,13 @@ function LocateStep({
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-4">
-      <div className="w-12 h-12 rounded-xl bg-brand/20 border border-brand/30 flex items-center justify-center shadow-[0_12px_30px_rgba(83,74,183,0.2)]">
+      <div className="w-12 h-12 rounded-2xl bg-accent-light border border-accent/15 flex items-center justify-center shadow-sm">
         <svg
           width="20"
           height="20"
           viewBox="0 0 20 20"
           fill="none"
-          className="text-brand"
+          className="text-accent"
           aria-hidden="true"
         >
           <path
@@ -429,13 +425,13 @@ function LocateStep({
         <p className="text-xs text-text-muted max-w-xs">{projectPath}</p>
       </div>
       <p className="text-xs text-text-secondary max-w-sm text-center leading-5">
-        This project has environment files but no <code className="text-brand-muted">.env.schema</code> yet.
+        This project has environment files but no <code className="text-accent font-medium">.env.schema</code> yet.
         We'll scan the files and generate a schema for you.
       </p>
       <button
         onClick={onLoadPlan}
         disabled={loading}
-        className="px-5 py-2 text-xs text-white bg-brand border border-brand rounded-lg hover:bg-brand-dark disabled:opacity-50 transition-colors cursor-pointer"
+        className="px-5 py-2 text-xs text-white bg-accent rounded-lg hover:bg-accent-hover disabled:opacity-50 transition-colors cursor-pointer shadow-sm"
       >
         {loading ? "Scanning..." : "Scan environment files"}
       </button>
@@ -474,7 +470,7 @@ function MigrateStep({
         {plan.conflicts.length > 0 && (
           <div className="mt-4">
             <SectionTitle>Conflicts</SectionTitle>
-            <div className="rounded-lg border border-warning/30 bg-warning-light/10 p-3">
+            <div className="rounded-lg border border-warning/20 bg-warning-light p-3">
               {plan.conflicts.map((c, i) => (
                 <p key={i} className="text-xs text-warning-dark leading-5">
                   {c}
@@ -525,7 +521,7 @@ function ConfigureStep({
           value={schemaPreview}
           onChange={(e) => onSchemaChange(e.target.value)}
           spellCheck={false}
-          className="flex-1 min-h-[300px] w-full bg-[#1a1a18] text-[#e8e6df] border border-border rounded-xl p-4 font-mono text-[11px] leading-[1.8] resize-none focus:outline-none focus:border-brand/50"
+          className="flex-1 min-h-[300px] w-full bg-[#1C1C1E] text-[#E5E5EA] border border-border-light rounded-xl p-4 font-mono text-[11px] leading-[1.8] resize-none focus:outline-none focus:border-accent/50 transition-colors"
         />
       </div>
 
@@ -534,12 +530,12 @@ function ConfigureStep({
         <SectionTitle>Options</SectionTitle>
 
         {/* Backup toggle */}
-        <label className="flex items-start gap-3 p-3 rounded-lg border border-border-light bg-surface-secondary cursor-pointer mb-3">
+        <label className="flex items-start gap-3 p-3 rounded-xl border border-border-light bg-surface-secondary cursor-pointer mb-3">
           <input
             type="checkbox"
             checked={createBackups}
             onChange={(e) => onBackupsChange(e.target.checked)}
-            className="mt-0.5 accent-brand"
+            className="mt-0.5 accent-accent"
           />
           <div>
             <p className="text-xs font-medium text-text">Create backups</p>
@@ -551,7 +547,7 @@ function ConfigureStep({
 
         {/* Existing schema warning */}
         {plan.hasExistingSchema && (
-          <div className="rounded-lg border border-warning/30 bg-warning-light/10 p-3 mb-3">
+          <div className="rounded-xl border border-warning/20 bg-warning-light p-3 mb-3">
             <p className="text-xs font-medium text-warning-dark mb-1">
               Existing schema detected
             </p>
@@ -591,9 +587,9 @@ function ConfigureStep({
 
 function DoneStep({ result }: { result: MigrationApplyResult }) {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-4">
+    <div className="flex-1 flex flex-col items-center justify-center gap-4 animate-fade-in">
       {/* Success icon */}
-      <div className="w-14 h-14 rounded-full bg-success/20 border border-success/30 flex items-center justify-center">
+      <div className="w-14 h-14 rounded-2xl bg-success-light border border-success/20 flex items-center justify-center shadow-sm">
         <svg
           width="24"
           height="24"
@@ -666,19 +662,19 @@ function DoneStep({ result }: { result: MigrationApplyResult }) {
       </div>
 
       {/* Next steps */}
-      <div className="w-full max-w-sm mt-2 rounded-lg border border-border-light bg-surface-secondary p-4">
+      <div className="w-full max-w-sm mt-2 rounded-xl border border-border-light bg-surface-secondary p-4">
         <p className="text-xs font-medium text-text mb-2">Next steps</p>
         <ul className="space-y-1.5 text-[11px] text-text-secondary leading-4">
           <li className="flex gap-2">
-            <span className="text-brand shrink-0">1.</span>
+            <span className="text-accent shrink-0">1.</span>
             Review variables in the dashboard and fill any empty values
           </li>
           <li className="flex gap-2">
-            <span className="text-brand shrink-0">2.</span>
+            <span className="text-accent shrink-0">2.</span>
             Run a security scan to check for leaked secrets
           </li>
           <li className="flex gap-2">
-            <span className="text-brand shrink-0">3.</span>
+            <span className="text-accent shrink-0">3.</span>
             Use the terminal to run your app with injected environment variables
           </li>
         </ul>
@@ -698,14 +694,14 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 function FileItem({ file }: { file: DetectedEnvFile }) {
-  const colors = ROLE_DOT_COLORS[file.role] ?? { bg: "#F1EFE8", dot: "#5F5E5A" };
+  const colors = ROLE_DOT_COLORS[file.role] ?? { bg: "#F5F5F7", dot: "#6E6E73" };
   const roleLabel = ROLE_LABELS[file.role] ?? "File";
   const roleDesc = ROLE_DESCRIPTIONS[file.role] ?? "";
 
   return (
     <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border-light bg-surface-secondary">
       <div
-        className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
+        className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
         style={{ background: colors.bg }}
       >
         <div
@@ -720,7 +716,7 @@ function FileItem({ file }: { file: DetectedEnvFile }) {
         <p className="text-[11px] text-text-muted truncate">
           {file.variableCount} variable{file.variableCount !== 1 ? "s" : ""}
           {file.sensitiveKeyCount > 0 && (
-            <span className="text-brand-muted">
+            <span className="text-accent-muted">
               {" "}
               ({file.sensitiveKeyCount} sensitive)
             </span>
@@ -764,7 +760,7 @@ function MigrationMapRow({ variable }: { variable: MigrationVariable }) {
   const typeBadge = getTypeBadgeStyle(variable.inferredType);
 
   return (
-    <div className="grid grid-cols-[1fr_24px_1fr] gap-1.5 items-center px-3 py-1.5 border-b border-border-light last:border-b-0">
+    <div className="grid grid-cols-[1fr_24px_1fr] gap-1.5 items-center px-3 py-1.5 border-b border-border-light last:border-b-0 bg-surface">
       {/* Original */}
       <div className="font-mono text-[11px] text-text truncate">
         {variable.key}
@@ -795,7 +791,7 @@ function MigrationMapRow({ variable }: { variable: MigrationVariable }) {
         {variable.inferredSensitive && (
           <span
             className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-            style={{ background: "#EEEDFE", color: "#534AB7" }}
+            style={{ background: "#E8F2FF", color: "#0A84FF" }}
           >
             @sensitive
           </span>
@@ -812,7 +808,7 @@ function SchemaPreviewBox({ content }: { content: string }) {
   const lines = content.split("\n");
 
   return (
-    <div className="bg-[#1a1a18] rounded-xl p-3.5 font-mono text-[11px] leading-[1.8] max-h-[400px] overflow-auto">
+    <div className="bg-[#1C1C1E] rounded-xl p-3.5 font-mono text-[11px] leading-[1.8] max-h-[400px] overflow-auto">
       {lines.map((line, i) => (
         <SchemaPreviewLine key={i} line={line} />
       ))}
@@ -825,13 +821,13 @@ function SchemaPreviewLine({ line }: { line: string }) {
   if (line.startsWith("#")) {
     // Decorator comments
     if (line.includes("@sensitive")) {
-      return <div style={{ color: "#AFA9EC" }}>{line}</div>;
+      return <div style={{ color: "#0A84FF" }}>{line}</div>;
     }
     if (line.includes("@type=") || line.includes("@required")) {
-      return <div style={{ color: "#666" }}>{line}</div>;
+      return <div style={{ color: "#8E8E93" }}>{line}</div>;
     }
     // Description comments
-    return <div style={{ color: "#666" }}>{line}</div>;
+    return <div style={{ color: "#8E8E93" }}>{line}</div>;
   }
 
   // Empty lines
@@ -846,13 +842,13 @@ function SchemaPreviewLine({ line }: { line: string }) {
     const value = line.slice(eqPos);
     return (
       <div>
-        <span style={{ color: "#97C459" }}>{key}</span>
-        <span style={{ color: "#e8e6df" }}>{value}</span>
+        <span style={{ color: "#34C759" }}>{key}</span>
+        <span style={{ color: "#E5E5EA" }}>{value}</span>
       </div>
     );
   }
 
-  return <div style={{ color: "#e8e6df" }}>{line}</div>;
+  return <div style={{ color: "#E5E5EA" }}>{line}</div>;
 }
 
 function SensitiveCallout({ plan }: { plan: MigrationPlan }) {
@@ -860,7 +856,7 @@ function SensitiveCallout({ plan }: { plan: MigrationPlan }) {
   if (sensitiveVars.length === 0) return null;
 
   return (
-    <div className="mt-3.5 rounded-lg border border-border-light bg-surface-secondary p-3">
+    <div className="mt-3.5 rounded-xl border border-border-light bg-surface-secondary p-3">
       <p className="text-[11px] font-medium text-text mb-1.5">
         {sensitiveVars.length} sensitive key
         {sensitiveVars.length !== 1 ? "s" : ""} detected
@@ -873,7 +869,7 @@ function SensitiveCallout({ plan }: { plan: MigrationPlan }) {
         {sensitiveVars.length > 3 &&
           ` and ${sensitiveVars.length - 3} more`}{" "}
         {sensitiveVars.length === 1 ? "was" : "were"} detected as sensitive.
-        These will be marked with <code className="text-brand-muted">@sensitive</code> in
+        These will be marked with <code className="text-accent font-medium">@sensitive</code> in
         the schema.
       </p>
     </div>

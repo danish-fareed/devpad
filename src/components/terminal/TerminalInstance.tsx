@@ -26,7 +26,7 @@ export const TerminalInstance = forwardRef<TerminalInstanceHandle>(
     return (
       <div
         ref={terminalRef}
-        className="terminal-container w-full h-full bg-[#1a1a18]"
+        className="terminal-container w-full h-full bg-[#1C1C1E]"
         role="log"
         aria-label="Terminal output"
       />

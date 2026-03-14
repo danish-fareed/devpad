@@ -7,8 +7,7 @@ interface AddProjectDialogProps {
 }
 
 /**
- * Modal dialog for adding a new project.
- * Opens a native directory picker, then adds the project.
+ * macOS-style sheet dialog for adding a new project.
  */
 export function AddProjectDialog({ onClose }: AddProjectDialogProps) {
   const addProject = useProjectStore((s) => s.addProject);
@@ -20,38 +19,30 @@ export function AddProjectDialog({ onClose }: AddProjectDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const firstFocusRef = useRef<HTMLButtonElement>(null);
 
-  // Focus trap: move focus into dialog on mount
   useEffect(() => {
     firstFocusRef.current?.focus();
   }, []);
 
-  // Handle escape key to close
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
+      if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  // Trap focus inside the dialog
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
 
     const handleFocusTrap = (e: KeyboardEvent) => {
       if (e.key !== "Tab") return;
-
       const focusable = dialog.querySelectorAll<HTMLElement>(
         'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
       );
       if (focusable.length === 0) return;
-
       const first = focusable[0]!;
       const last = focusable[focusable.length - 1]!;
-
       if (e.shiftKey) {
         if (document.activeElement === first) {
           e.preventDefault();
@@ -71,9 +62,7 @@ export function AddProjectDialog({ onClose }: AddProjectDialogProps) {
 
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent) => {
-      if (e.target === e.currentTarget) {
-        onClose();
-      }
+      if (e.target === e.currentTarget) onClose();
     },
     [onClose],
   );
@@ -109,7 +98,7 @@ export function AddProjectDialog({ onClose }: AddProjectDialogProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-[2px]"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="add-project-title"
@@ -117,22 +106,22 @@ export function AddProjectDialog({ onClose }: AddProjectDialogProps) {
     >
       <div
         ref={dialogRef}
-        className="bg-surface rounded-xl shadow-[0_28px_80px_rgba(0,0,0,0.45)] border border-border w-full max-w-md mx-4"
+        className="bg-surface rounded-xl shadow-[0_24px_80px_rgba(0,0,0,0.12),0_0_0_1px_rgba(0,0,0,0.06)] w-full max-w-md mx-4 animate-scale-in"
       >
         {/* Header */}
         <div className="px-5 py-4 border-b border-border-light flex items-center justify-between">
-          <h2 id="add-project-title" className="text-[15px] font-medium text-text">
+          <h2 id="add-project-title" className="text-[15px] font-semibold text-text">
             Add Project
           </h2>
           <button
             ref={firstFocusRef}
             onClick={onClose}
             aria-label="Close dialog"
-            className="text-text-muted hover:text-text transition-colors cursor-pointer"
+            className="w-6 h-6 rounded-md flex items-center justify-center text-text-muted hover:text-text hover:bg-surface-tertiary transition-colors cursor-pointer border-none bg-transparent"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
               <path
-                d="M4 4l8 8M12 4l-8 8"
+                d="M2 2l8 8M10 2l-8 8"
                 stroke="currentColor"
                 strokeWidth="1.5"
                 strokeLinecap="round"
@@ -143,7 +132,7 @@ export function AddProjectDialog({ onClose }: AddProjectDialogProps) {
 
         {/* Body */}
         <div className="px-5 py-5">
-          <p className="text-sm text-text-secondary mb-4">
+          <p className="text-[13px] text-text-secondary mb-4 leading-5">
             Select a project directory that contains (or will contain) a
             .env.schema file.
           </p>
@@ -152,38 +141,38 @@ export function AddProjectDialog({ onClose }: AddProjectDialogProps) {
           <button
             onClick={handlePickDirectory}
             disabled={loading || picking}
-            className="w-full border border-dashed border-border rounded-xl py-5 text-center hover:border-brand hover:bg-brand-light/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-surface-secondary"
+            className="w-full border border-dashed border-border rounded-lg py-5 text-center hover:border-accent hover:bg-accent-light/30 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-surface-sunken"
           >
             {selectedPath ? (
               <div>
-                <p className="text-sm font-medium text-text mb-1">
+                <p className="text-[13px] font-medium text-text mb-0.5">
                   {selectedPath.split(/[\\/]/).pop()}
                 </p>
-                <p className="text-xs text-text-muted">{selectedPath}</p>
+                <p className="text-[11px] text-text-muted">{selectedPath}</p>
               </div>
             ) : (
               <div>
-                <div className="w-9 h-9 rounded-lg bg-brand/18 border border-brand/25 flex items-center justify-center mx-auto mb-2">
+                <div className="w-10 h-10 rounded-xl bg-accent-light flex items-center justify-center mx-auto mb-2">
                   <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 16 16"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 18 18"
                     fill="none"
-                    className="text-brand"
+                    className="text-accent"
                     aria-hidden="true"
                   >
                     <path
-                      d="M2 4v8a1 1 0 001 1h10a1 1 0 001-1V6a1 1 0 00-1-1H8L6.5 3H3a1 1 0 00-1 1z"
+                      d="M2.5 5v8.5a1.5 1.5 0 001.5 1.5h10a1.5 1.5 0 001.5-1.5V7.5a1.5 1.5 0 00-1.5-1.5H9L7.25 4H4a1.5 1.5 0 00-1.5 1z"
                       stroke="currentColor"
                       strokeWidth="1.2"
                       strokeLinejoin="round"
                     />
                   </svg>
                 </div>
-                <p className="text-sm font-medium text-text mb-1">
+                <p className="text-[13px] font-medium text-text mb-0.5">
                   {picking ? "Opening folder picker..." : "Choose directory"}
                 </p>
-                <p className="text-xs text-text-muted">
+                <p className="text-[11px] text-text-muted">
                   Select your project folder
                 </p>
               </div>
@@ -193,7 +182,7 @@ export function AddProjectDialog({ onClose }: AddProjectDialogProps) {
           {/* Error message */}
           {error && (
             <div
-              className="mt-3 bg-danger-light text-danger-dark text-xs px-3 py-2 rounded-lg"
+              className="mt-3 bg-danger-light text-danger-dark text-[12px] px-3 py-2 rounded-lg"
               role="alert"
             >
               {error}
@@ -205,14 +194,14 @@ export function AddProjectDialog({ onClose }: AddProjectDialogProps) {
         <div className="px-5 py-4 border-t border-border-light flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-xs text-text border border-border rounded-lg hover:bg-surface-secondary transition-colors cursor-pointer"
+            className="h-8 px-4 text-[13px] font-medium text-text border border-border rounded-lg hover:bg-surface-secondary transition-colors cursor-pointer bg-surface"
           >
             Cancel
           </button>
           <button
             onClick={handleAdd}
             disabled={!selectedPath || loading}
-            className="px-4 py-2 text-xs text-white bg-brand border border-brand rounded-lg hover:bg-brand-dark disabled:opacity-50 transition-colors cursor-pointer"
+            className="h-8 px-4 text-[13px] font-medium text-white bg-accent border border-accent rounded-lg hover:bg-accent-hover disabled:opacity-50 transition-colors cursor-pointer"
           >
             {loading ? "Adding..." : "Add Project"}
           </button>

@@ -9,8 +9,7 @@ import { VariableFilters } from "./VariableFilters";
 import { buildEditableVariable } from "@/lib/buildEditableVariable";
 
 /**
- * Table displaying all environment variables from the latest varlock load.
- * Includes filter pills, column headers, and the variable detail drawer.
+ * Variable table — macOS-style list with filters, column headers, and detail inspector.
  */
 export function VariableList() {
   const activeProject = useProjectStore((s) => s.activeProject);
@@ -27,19 +26,16 @@ export function VariableList() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Find the MergedVariable for the selected key
   const selectedVariable = useMemo(
     () => loadResult?.variables.find((v) => v.key === selectedVariableKey) ?? null,
     [loadResult?.variables, selectedVariableKey],
   );
 
-  // Build the rich EditableVariable for the drawer (adds per-file values + schema entry)
   const selectedEditableVariable = useMemo(() => {
     if (!selectedVariable) return null;
     return buildEditableVariable(selectedVariable, editableFiles, fileContents);
   }, [selectedVariable, editableFiles, fileContents]);
 
-  // Reset state on project switch
   useEffect(() => {
     setSelectedVariableKey(null);
     setEditableFiles([]);
@@ -50,7 +46,6 @@ export function VariableList() {
     setIsSaving(false);
   }, [activeProject?.id]);
 
-  // Load editable files when a variable is selected
   useEffect(() => {
     if (!activeProject || !selectedVariableKey) return;
 
@@ -85,9 +80,7 @@ export function VariableList() {
       }
     };
 
-    loadEditorFiles().catch(() => {
-      // errors already reflected in state
-    });
+    loadEditorFiles().catch(() => {});
 
     return () => {
       cancelled = true;
@@ -159,47 +152,47 @@ export function VariableList() {
       <div>
         {/* Header with filters */}
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-medium text-text-secondary tracking-wider">
-            VARIABLES — {activeEnv}
+          <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
+            Variables — {activeEnv}
           </h3>
           <VariableFilters />
         </div>
 
         {/* Loading state */}
         {isLoading && (
-          <div className="border border-border-light rounded-xl p-8 text-center">
-            <p className="text-sm text-text-muted">Loading variables...</p>
+          <div className="border border-border-light rounded-lg p-8 text-center bg-surface">
+            <p className="text-[13px] text-text-muted animate-pulse-soft">Loading variables...</p>
           </div>
         )}
 
         {/* Variable table */}
         {!isLoading && loadResult && (
-          <div className="border border-border-light rounded-xl overflow-hidden">
+          <div className="border border-border-light rounded-lg overflow-hidden bg-surface shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             {/* Column headers */}
-            <div className="grid grid-cols-[180px_1fr_80px_80px] px-3 py-2 bg-surface-secondary border-b border-border-light gap-3">
-              <span className="text-[10px] font-medium text-text-muted tracking-wider uppercase">
+            <div className="grid grid-cols-[200px_1fr_80px_90px] px-4 py-2 bg-surface-secondary border-b border-border-light gap-3">
+              <span className="text-[11px] font-medium text-text-muted">
                 Key
               </span>
-              <span className="text-[10px] font-medium text-text-muted tracking-wider uppercase">
+              <span className="text-[11px] font-medium text-text-muted">
                 Value
               </span>
-              <span className="text-[10px] font-medium text-text-muted tracking-wider uppercase">
+              <span className="text-[11px] font-medium text-text-muted">
                 Type
               </span>
-              <span className="text-[10px] font-medium text-text-muted tracking-wider uppercase text-right">
+              <span className="text-[11px] font-medium text-text-muted text-right">
                 Status
               </span>
             </div>
 
             {/* Variable rows */}
             {variables.length === 0 ? (
-              <div className="px-3 py-6 text-center text-sm text-text-muted">
+              <div className="px-4 py-8 text-center text-[13px] text-text-muted">
                 No variables match the current filter.
               </div>
             ) : (
               variables.map((variable, index) => (
                 <div key={variable.key}>
-                  {index > 0 && <div className="h-px bg-border-light mx-3" />}
+                  {index > 0 && <div className="h-px bg-border-light" />}
                   <VariableRow
                     variable={variable}
                     onSelect={handleSelectVariable}
@@ -211,7 +204,7 @@ export function VariableList() {
         )}
 
         {editorError && selectedVariable && (
-          <div className="mt-3 rounded-xl border border-danger/25 bg-danger-light/10 px-3 py-3 text-sm text-danger-dark">
+          <div className="mt-3 rounded-lg border border-danger/20 bg-danger-light px-3 py-2.5 text-[12px] text-danger-dark">
             {editorError}
           </div>
         )}
@@ -232,11 +225,11 @@ export function VariableList() {
       )}
 
       {selectedVariable && editorLoading && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/35">
-          <div className="h-full w-full max-w-[560px] border-l border-border bg-surface shadow-[-24px_0_80px_rgba(0,0,0,0.35)] p-6">
-            <div className="text-sm text-text-secondary">Loading variable detail...</div>
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/15 backdrop-blur-sm">
+          <div className="h-full w-full max-w-[520px] border-l border-border-light bg-surface shadow-[-8px_0_40px_rgba(0,0,0,0.08)] p-6 animate-slide-in-right">
+            <div className="text-[13px] text-text-secondary animate-pulse-soft">Loading variable detail...</div>
             {editorError && (
-              <div className="mt-3 rounded-xl border border-danger/25 bg-danger-light/10 px-3 py-3 text-sm text-danger-dark">
+              <div className="mt-3 rounded-lg border border-danger/20 bg-danger-light px-3 py-2.5 text-[12px] text-danger-dark">
                 {editorError}
               </div>
             )}

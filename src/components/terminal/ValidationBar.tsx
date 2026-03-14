@@ -7,7 +7,6 @@ interface ValidationBarProps {
 
 /**
  * Bottom bar showing variable validation summary and a stop button.
- * Mirrors the mockup's val-bar design.
  */
 export function ValidationBar({ onStop }: ValidationBarProps) {
   const loadResult = useEnvironmentStore((s) => s.loadResult);
@@ -31,7 +30,7 @@ export function ValidationBar({ onStop }: ValidationBarProps) {
   };
 
   return (
-    <div className="flex items-center px-3.5 py-2.5 bg-surface-secondary border-t border-border-light gap-3 flex-wrap shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+    <div className="flex items-center px-3.5 py-2 bg-surface-secondary border-t border-border-light gap-3 flex-wrap">
       <span className="text-[11px] text-text-muted mr-1">
         {totalVars} vars:
       </span>
@@ -43,7 +42,7 @@ export function ValidationBar({ onStop }: ValidationBarProps) {
 
       {secretCount > 0 && (
         <div className="flex items-center gap-1.5 text-[11px]">
-          <div className="w-1.5 h-1.5 rounded-full bg-brand" />
+          <div className="w-1.5 h-1.5 rounded-full bg-accent" />
           <span className="text-text-secondary">
             {secretCount} secret{secretCount !== 1 ? "s" : ""} resolved
           </span>
@@ -63,7 +62,7 @@ export function ValidationBar({ onStop }: ValidationBarProps) {
         <button
           onClick={handleStop}
           disabled={stopping}
-          className="text-[11px] px-3 py-1 border border-danger rounded-md bg-transparent text-danger hover:bg-danger-light transition-colors cursor-pointer disabled:opacity-50"
+          className="text-[11px] px-3 py-1 border border-danger/40 rounded-lg bg-transparent text-danger hover:bg-danger-light transition-colors cursor-pointer disabled:opacity-50"
         >
           {stopping ? "Stopping..." : "Stop process"}
         </button>

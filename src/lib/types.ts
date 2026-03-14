@@ -81,7 +81,7 @@ export interface TerminalSession {
 
 // ── UI view state ──
 
-export type AppView = "dashboard" | "terminal";
+export type AppView = "dashboard" | "terminal" | "settings";
 
 // ── Schema editing types ──
 

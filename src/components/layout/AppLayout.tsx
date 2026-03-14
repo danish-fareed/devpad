@@ -6,26 +6,31 @@ import { VariableList } from "@/components/variables/VariableList";
 import { TerminalPanel } from "@/components/terminal/TerminalPanel";
 import { MigrationWizard } from "@/components/migration/MigrationWizard";
 import { ScanResultsPanel } from "@/components/scan/ScanResultsPanel";
+import { SettingsPage } from "@/components/settings/SettingsPage";
 import { useScanStore } from "@/stores/scanStore";
 
 /**
- * Root layout component: sidebar + main content area.
- * Switches between dashboard, terminal, scan results, and migration views.
+ * Root layout component — macOS-style collapsible sidebar + main content area.
+ * Switches between dashboard, terminal, settings, scan results, and migration views.
  */
 export function AppLayout() {
   const { activeProject, view } = useProjectStore();
   const showScanResults = useScanStore((s) => s.showResults);
 
   return (
-    <div className="h-screen w-screen flex overflow-hidden bg-surface text-text">
-      {/* Sidebar */}
+    <div className="h-screen w-screen flex overflow-hidden bg-surface-secondary text-text">
+      {/* macOS Sidebar (collapsible) */}
       <Sidebar />
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <TopBar />
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col overflow-hidden bg-surface rounded-tl-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+        {/* TopBar — hidden on settings page */}
+        {view !== "settings" && <TopBar />}
 
-        {activeProject ? (
+        {/* Settings page (no project required) */}
+        {view === "settings" ? (
+          <SettingsPage />
+        ) : activeProject ? (
           activeProject.status === "migrationNeeded" ? (
             <MigrationWizard />
           ) : showScanResults ? (
@@ -45,7 +50,7 @@ export function AppLayout() {
 
 function DashboardView() {
   return (
-    <div className="flex-1 overflow-auto p-5 flex flex-col gap-5 bg-surface">
+    <div className="flex-1 overflow-auto p-6 flex flex-col gap-6 bg-surface">
       <EnvironmentCards />
       <div className="h-px bg-border-light" />
       <VariableList />
@@ -55,26 +60,28 @@ function DashboardView() {
 
 function EmptyState() {
   return (
-      <div className="flex-1 flex items-center justify-center bg-[radial-gradient(circle_at_top,#232320_0%,#161615_55%)]">
-        <div className="text-center max-w-sm">
-        <div className="w-12 h-12 rounded-xl bg-brand/20 border border-brand/30 flex items-center justify-center mx-auto mb-4 shadow-[0_12px_30px_rgba(83,74,183,0.2)]">
+    <div className="flex-1 flex items-center justify-center bg-surface">
+      <div className="text-center max-w-xs animate-fade-in">
+        <div className="w-14 h-14 rounded-2xl bg-accent-light flex items-center justify-center mx-auto mb-5 shadow-sm">
           <svg
-            width="20"
-            height="20"
-            viewBox="0 0 20 20"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
             fill="none"
-            className="text-brand"
+            className="text-accent"
           >
             <path
-              d="M10 3v14M3 10h14"
+              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
               stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
             />
           </svg>
         </div>
-        <h2 className="text-lg font-medium text-text mb-2">No project selected</h2>
-        <p className="text-text-secondary text-sm leading-6">
+        <h2 className="text-base font-medium text-text mb-1.5">
+          No project selected
+        </h2>
+        <p className="text-text-secondary text-[13px] leading-5">
           Add a project from the sidebar to get started with Varlock.
         </p>
       </div>

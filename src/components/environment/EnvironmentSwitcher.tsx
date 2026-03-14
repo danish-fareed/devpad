@@ -7,7 +7,7 @@ interface EnvironmentSwitcherProps {
 }
 
 /**
- * Compact environment selector used in the terminal sidebar.
+ * Compact environment selector — macOS-style radio list for terminal sidebar.
  */
 export function EnvironmentSwitcher({
   environments,
@@ -21,9 +21,9 @@ export function EnvironmentSwitcher({
   };
 
   return (
-    <div className="flex flex-col gap-1.5" role="radiogroup" aria-label="Environment selector">
+    <div className="flex flex-col gap-1" role="radiogroup" aria-label="Environment selector">
       {environments.length === 0 && (
-        <div className="text-xs text-text-muted py-2">No environments available.</div>
+        <div className="text-[12px] text-text-muted py-2">No environments available.</div>
       )}
       {environments.map((env) => {
         const badge = ENV_BADGE_STYLES[env] ?? DEFAULT_ENV_BADGE;
@@ -35,21 +35,33 @@ export function EnvironmentSwitcher({
             onClick={() => handleSelect(env)}
             role="radio"
             aria-checked={isActive}
-            className={`px-3 py-2.5 border rounded-lg text-left transition-all cursor-pointer ${
+            className={`px-3 py-2 border rounded-lg text-left transition-all cursor-pointer ${
               isActive
-                ? "border-brand border-[1.5px] bg-brand-light"
-                : "border-border hover:border-brand/50"
+                ? "border-accent bg-accent-light/50 shadow-[0_0_0_1px_rgba(10,132,255,0.15)]"
+                : "border-border-light bg-surface hover:border-border hover:bg-surface-secondary"
             }`}
           >
-            <div className="text-[13px] font-medium text-text">
-              .env.{env}
+            <div className="flex items-center gap-2">
+              {/* Radio indicator */}
+              <div
+                className={`w-3.5 h-3.5 rounded-full border-[1.5px] flex items-center justify-center shrink-0 transition-colors ${
+                  isActive ? "border-accent" : "border-border"
+                }`}
+              >
+                {isActive && <div className="w-[7px] h-[7px] rounded-full bg-accent" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[12px] font-medium text-text truncate">
+                  .env.{env}
+                </div>
+              </div>
+              <span
+                className="text-[10px] font-medium px-1.5 py-[2px] rounded-md shrink-0"
+                style={{ backgroundColor: badge.bg, color: badge.text }}
+              >
+                {env}
+              </span>
             </div>
-            <span
-              className="text-[10px] font-medium px-2 py-0.5 rounded-full mt-1 inline-block"
-              style={{ backgroundColor: badge.bg, color: badge.text }}
-            >
-              {env}
-            </span>
           </button>
         );
       })}

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useCallback } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
-import { TERMINAL_FONT_FAMILY, TERMINAL_FONT_SIZE, TERMINAL_THEME } from "@/lib/constants";
+import { TERMINAL_FONT_FAMILY, TERMINAL_THEME } from "@/lib/constants";
+import { useSettingsStore } from "@/stores/settingsStore";
 
 interface UseTerminalOptions {
   /** Callback when user types in the terminal */
@@ -26,12 +27,16 @@ interface UseTerminalReturn {
 /**
  * Hook that manages an xterm.js Terminal instance.
  * Handles creation, mounting, resize, and cleanup.
+ * Reads font size and scrollback from settings store.
  */
 export function useTerminal(options: UseTerminalOptions = {}): UseTerminalReturn {
   const terminalRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const observerRef = useRef<ResizeObserver | null>(null);
+
+  // Read settings at hook initialization time
+  const { terminalFontSize, terminalScrollback } = useSettingsStore.getState();
 
   useEffect(() => {
     const container = terminalRef.current;
@@ -44,11 +49,11 @@ export function useTerminal(options: UseTerminalOptions = {}): UseTerminalReturn
     // Create terminal instance
     const terminal = new Terminal({
       fontFamily: TERMINAL_FONT_FAMILY,
-      fontSize: TERMINAL_FONT_SIZE,
+      fontSize: terminalFontSize,
       theme: TERMINAL_THEME,
       cursorBlink: true,
       cursorStyle: "block",
-      scrollback: 10000,
+      scrollback: terminalScrollback,
       convertEol: true,
       allowProposedApi: true,
     });

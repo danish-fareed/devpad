@@ -2,58 +2,112 @@
 @import "@xterm/xterm/css/xterm.css";
 
 @theme {
-  --color-brand: #534AB7;
-  --color-brand-light: #EEEDFE;
-  --color-brand-dark: #3C3489;
-  --color-brand-muted: #AFA9EC;
+  /* ── Accent ── */
+  --color-accent: #0A84FF;
+  --color-accent-hover: #0071E3;
+  --color-accent-light: #E8F2FF;
+  --color-accent-muted: #9DC4F0;
 
-  --color-success: #639922;
-  --color-success-light: #EAF3DE;
-  --color-success-dark: #3B6D11;
+  /* ── Semantic ── */
+  --color-success: #34C759;
+  --color-success-light: #E8FAE9;
+  --color-success-dark: #1E7A2E;
 
-  --color-warning: #BA7517;
-  --color-warning-light: #FAEEDA;
-  --color-warning-dark: #633806;
+  --color-warning: #FF9500;
+  --color-warning-light: #FFF4E5;
+  --color-warning-dark: #8A4D00;
 
-  --color-danger: #E24B4A;
-  --color-danger-light: #FCEBEB;
-  --color-danger-dark: #A32D2D;
+  --color-danger: #FF3B30;
+  --color-danger-light: #FFEDED;
+  --color-danger-dark: #A51D14;
 
-  --color-surface: #161615;
-  --color-surface-secondary: #1d1d1b;
-  --color-surface-tertiary: #262624;
+  /* ── Surfaces (light defaults) ── */
+  --color-surface: #FFFFFF;
+  --color-surface-secondary: #F5F5F7;
+  --color-surface-tertiary: #ECECEE;
+  --color-surface-sunken: #FAFAFA;
 
-  --color-border: #3a3a37;
-  --color-border-light: #2a2a28;
+  /* ── Borders ── */
+  --color-border: #D2D2D7;
+  --color-border-light: #E8E8ED;
 
-  --color-text: #ece9e1;
-  --color-text-secondary: #b7b1a5;
-  --color-text-muted: #7d776d;
+  /* ── Text ── */
+  --color-text: #1D1D1F;
+  --color-text-secondary: #6E6E73;
+  --color-text-muted: #AEAEB2;
+
+  /* ── Sidebar ── */
+  --color-sidebar: #F0F0F2;
+  --color-sidebar-hover: #E4E4E8;
+  --color-sidebar-active: #DCDCE0;
 }
 
-/* Custom scrollbar styles */
+/* ── Dark mode overrides ── */
+.dark {
+  --color-accent-light: rgba(10, 132, 255, 0.15);
+  --color-accent-muted: #1A5A9E;
+
+  --color-success-light: rgba(52, 199, 89, 0.15);
+  --color-success-dark: #4CD964;
+
+  --color-warning-light: rgba(255, 149, 0, 0.15);
+  --color-warning-dark: #FFD60A;
+
+  --color-danger-light: rgba(255, 59, 48, 0.15);
+  --color-danger-dark: #FF6961;
+
+  --color-surface: #1C1C1E;
+  --color-surface-secondary: #2C2C2E;
+  --color-surface-tertiary: #3A3A3C;
+  --color-surface-sunken: #161618;
+
+  --color-border: #48484A;
+  --color-border-light: #38383A;
+
+  --color-text: #F5F5F7;
+  --color-text-secondary: #98989D;
+  --color-text-muted: #636366;
+
+  --color-sidebar: #1C1C1E;
+  --color-sidebar-hover: #2C2C2E;
+  --color-sidebar-active: #3A3A3C;
+}
+
+/* ── Custom scrollbar (subtle macOS style) ── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #4a4a46;
+  background: rgba(0, 0, 0, 0.28);
+  background-clip: content-box;
 }
 
-/* Prevent text selection on drag areas */
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  background-clip: content-box;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+  background-clip: content-box;
+}
+
+/* ── Prevent text selection on drag areas ── */
 .no-select {
   user-select: none;
   -webkit-user-select: none;
 }
 
-/* Terminal container must take up available space */
+/* ── Terminal container ── */
 .terminal-container {
   width: 100%;
   height: 100%;
@@ -65,15 +119,18 @@
   overflow-y: auto !important;
 }
 
+/* ── Base ── */
 body {
   margin: 0;
   padding: 0;
-  background: var(--color-surface);
+  background: var(--color-surface-secondary);
   color: var(--color-text);
-  font-family: "Inter", "Segoe UI", sans-serif;
+  font-family: "Geist", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  font-feature-settings: "ss01", "ss02", "cv01";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
+  letter-spacing: -0.011em;
 }
 
 #root {
@@ -87,9 +144,72 @@ input,
 textarea,
 select {
   font: inherit;
+  letter-spacing: inherit;
 }
 
 ::selection {
-  background: rgb(83 74 183 / 45%);
-  color: #fff;
+  background: rgba(10, 132, 255, 0.2);
+  color: inherit;
+}
+
+/* ── macOS-style focus ring ── */
+*:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Smooth transitions by default ── */
+button,
+a,
+input,
+select,
+textarea {
+  transition: all 0.15s ease;
+}
+
+/* ── Keyframes ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out both;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out both;
+}
+
+.animate-slide-in-up {
+  animation: slideInUp 0.25s ease-out both;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out both;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
 }

@@ -4,62 +4,48 @@ import { useEnvironmentStore } from "@/stores/environmentStore";
 import { useTerminalStore, isDangerousEnv } from "@/stores/terminalStore";
 import { TerminalInstance, type TerminalInstanceHandle } from "./TerminalInstance";
 import { TerminalTabs } from "./TerminalTabs";
-import { ValidationBar } from "./ValidationBar";
-import { EnvironmentSwitcher } from "@/components/environment/EnvironmentSwitcher";
-import type { SavedRunConfig } from "@/lib/types";
+import { ENV_BADGE_STYLES, DEFAULT_ENV_BADGE } from "@/lib/constants";
 
 /**
- * Full terminal panel: sidebar (env picker, command input, saved runs) + terminal area.
- * This is the primary view for `varlock run` interaction.
+ * Redesigned terminal panel — full-width terminal with top toolbar.
+ * Direct command input in the toolbar bar, environment switcher dropdown,
+ * and tab bar for multiple sessions. No saved runs sidebar.
  */
 export function TerminalPanel() {
   const activeProject = useProjectStore((s) => s.activeProject);
-  const { activeEnv } = useEnvironmentStore();
+  const { activeEnv, setActiveEnv } = useEnvironmentStore();
   const {
     sessions,
     activeSessionId,
-    commandInput,
-    savedRuns,
-    setCommandInput,
     launchProcess,
     killProcess,
-    addSavedRun,
-    removeSavedRun,
-    touchSavedRun,
   } = useTerminalStore();
 
   const terminalRefs = useRef<Map<string, TerminalInstanceHandle>>(new Map());
-  // Buffer output received before the terminal instance is mounted
   const pendingOutput = useRef<Map<string, string[]>>(new Map());
   const [isLaunching, setIsLaunching] = useState(false);
   const [showProdWarning, setShowProdWarning] = useState(false);
   const [pendingLaunchCmd, setPendingLaunchCmd] = useState<string | null>(null);
+  const [commandInput, setCommandInput] = useState("npm run dev");
+  const [showEnvDropdown, setShowEnvDropdown] = useState(false);
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
 
-  /**
-   * Write data to a terminal, buffering if the terminal isn't mounted yet.
-   */
   const writeToTerminal = useCallback((sessionId: string, data: string) => {
     const termHandle = terminalRefs.current.get(sessionId);
     if (termHandle) {
       termHandle.write(data);
     } else {
-      // Terminal not mounted yet -- buffer the output
       const buffer = pendingOutput.current.get(sessionId) ?? [];
       buffer.push(data);
       pendingOutput.current.set(sessionId, buffer);
     }
   }, []);
 
-  /**
-   * Called when a TerminalInstance ref is set. Flushes any buffered output.
-   */
   const handleTerminalRef = useCallback(
     (sessionId: string, handle: TerminalInstanceHandle | null) => {
       if (handle) {
         terminalRefs.current.set(sessionId, handle);
-        // Flush any pending output that arrived before mount
         const buffer = pendingOutput.current.get(sessionId);
         if (buffer && buffer.length > 0) {
           for (const data of buffer) {
@@ -96,7 +82,6 @@ export function TerminalPanel() {
           },
         );
 
-        // Write initial command display
         writeToTerminal(
           sessionId,
           `\x1b[90m$\x1b[0m varlock run -- ${cmd}\r\n`,
@@ -109,18 +94,16 @@ export function TerminalPanel() {
   );
 
   const handleLaunch = useCallback(
-    async (cmd?: string) => {
-      const command = cmd ?? commandInput;
-      if (!command.trim()) return;
+    async () => {
+      if (!commandInput.trim()) return;
 
-      // Check for dangerous environment
       if (isDangerousEnv(activeEnv)) {
-        setPendingLaunchCmd(command);
+        setPendingLaunchCmd(commandInput);
         setShowProdWarning(true);
         return;
       }
 
-      await doLaunch(command);
+      await doLaunch(commandInput);
     },
     [commandInput, activeEnv, doLaunch],
   );
@@ -150,47 +133,72 @@ export function TerminalPanel() {
     }
   };
 
-  const handleSaveCurrentCommand = () => {
-    if (commandInput.trim()) {
-      addSavedRun(commandInput.trim(), commandInput.trim(), null);
-    }
-  };
-
-  const handleUseSavedRun = (run: SavedRunConfig) => {
-    setCommandInput(run.command);
-    touchSavedRun(run.id);
-  };
-
   if (!activeProject) return null;
 
   const launchDisabled = !commandInput.trim() || isLaunching;
-
-  // Sort saved runs: most recently used first (0 = never used, sort to end)
-  const sortedSavedRuns = [...savedRuns].sort((a, b) => {
-    if (a.lastUsed === 0 && b.lastUsed === 0) return 0;
-    if (a.lastUsed === 0) return 1;
-    if (b.lastUsed === 0) return -1;
-    return b.lastUsed - a.lastUsed;
-  });
+  const envBadge = ENV_BADGE_STYLES[activeEnv] ?? DEFAULT_ENV_BADGE;
 
   return (
-    <div className="flex-1 flex overflow-hidden">
-      {/* Terminal sidebar */}
-      <div className="w-56 bg-surface-secondary border-r border-border-light flex flex-col shrink-0 p-3.5 overflow-auto">
-        {/* Environment picker */}
-        <h4 className="text-[11px] font-medium text-text-muted tracking-wider uppercase mb-2.5">
-          Environment
-        </h4>
-        <EnvironmentSwitcher environments={activeProject.environments} />
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {/* ── Command toolbar ── */}
+      <div className="flex items-center gap-2 px-3.5 py-2 bg-surface border-b border-border-light shrink-0">
+        {/* Environment switcher */}
+        <div className="relative">
+          <button
+            onClick={() => setShowEnvDropdown(!showEnvDropdown)}
+            className="h-8 px-2.5 rounded-lg border border-border bg-surface-secondary text-[12px] font-medium flex items-center gap-2 hover:border-accent/50 transition-colors cursor-pointer"
+          >
+            <span
+              className="w-2 h-2 rounded-full shrink-0"
+              style={{ backgroundColor: envBadge.text }}
+            />
+            <span className="text-text">{activeEnv}</span>
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="none" className="text-text-muted ml-0.5">
+              <path d="M1.5 3L4 5.5L6.5 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+
+          {/* Dropdown */}
+          {showEnvDropdown && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setShowEnvDropdown(false)}
+              />
+              <div className="absolute top-full left-0 mt-1 w-48 bg-surface border border-border-light rounded-xl shadow-lg py-1 z-50 animate-scale-in">
+                {activeProject.environments.map((env) => {
+                  const badge = ENV_BADGE_STYLES[env] ?? DEFAULT_ENV_BADGE;
+                  const isActive = activeEnv === env;
+                  return (
+                    <button
+                      key={env}
+                      onClick={() => {
+                        setActiveEnv(env);
+                        setShowEnvDropdown(false);
+                      }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-[12px] text-left cursor-pointer border-none transition-colors ${
+                        isActive
+                          ? "bg-accent text-white"
+                          : "bg-transparent text-text hover:bg-surface-secondary"
+                      }`}
+                    >
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{
+                          backgroundColor: isActive ? "currentColor" : badge.text,
+                        }}
+                      />
+                      <span className="font-medium">.env.{env}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
 
         {/* Command input */}
-        <h4
-          className="text-[11px] font-medium text-text-muted tracking-wider uppercase mt-5 mb-2.5"
-          id="command-label"
-        >
-          Command
-        </h4>
-        <div className="flex items-center gap-1.5 border border-border rounded-lg px-3 py-2 bg-surface mb-2">
+        <div className="flex-1 flex items-center gap-1.5 border border-border rounded-lg px-3 py-1.5 bg-surface-secondary focus-within:border-accent transition-colors">
           <span className="font-mono text-xs text-text-muted" aria-hidden="true">$</span>
           <input
             type="text"
@@ -198,180 +206,91 @@ export function TerminalPanel() {
             onChange={(e) => setCommandInput(e.target.value)}
             onKeyDown={handleKeyDown}
             className="font-mono text-xs border-none bg-transparent text-text outline-none w-full"
-            placeholder="npm run dev"
-            aria-labelledby="command-label"
+            placeholder="Enter command to run..."
           />
         </div>
 
-        {/* Save + Launch buttons */}
-        <div className="flex gap-1.5 mb-3">
+        {/* Launch / Stop button */}
+        {activeSession?.status === "running" ? (
           <button
-            onClick={handleSaveCurrentCommand}
-            disabled={!commandInput.trim()}
-            title="Save this command"
-            className="px-2.5 py-2 border border-border rounded-lg text-xs text-text-secondary hover:bg-surface hover:text-text disabled:opacity-40 transition-colors cursor-pointer"
+            onClick={handleStop}
+            className="h-8 px-4 bg-danger text-white border-none rounded-lg text-[12px] font-medium hover:bg-danger-dark transition-colors cursor-pointer shadow-sm flex items-center gap-1.5"
           >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-              fill="none"
-              aria-hidden="true"
-            >
-              <path
-                d="M6 2v8M2 6h8"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-              />
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <rect x="1" y="1" width="8" height="8" rx="1" fill="currentColor" />
             </svg>
+            Stop
           </button>
+        ) : (
           <button
-            onClick={() => handleLaunch()}
+            onClick={handleLaunch}
             disabled={launchDisabled}
-            className="flex-1 py-2 bg-brand text-white border-none rounded-lg text-[13px] font-medium hover:bg-brand-dark disabled:opacity-50 transition-colors cursor-pointer"
+            className="h-8 px-4 bg-accent text-white border-none rounded-lg text-[12px] font-medium hover:bg-accent-hover disabled:opacity-50 transition-colors cursor-pointer shadow-sm flex items-center gap-1.5"
           >
-            {isLaunching ? "Launching..." : "Launch"}
+            {isLaunching ? (
+              <>
+                <span className="w-3 h-3 border-[1.5px] border-white border-t-transparent rounded-full animate-spin" />
+                Launching
+              </>
+            ) : (
+              <>
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M2 1v8l7-4-7-4z" fill="currentColor" />
+                </svg>
+                Run
+              </>
+            )}
           </button>
-        </div>
-
-        {/* Saved runs */}
-        {sortedSavedRuns.length > 0 && (
-          <>
-            <div className="text-[11px] font-medium text-text-muted tracking-wider uppercase mb-2">
-              Saved runs
-            </div>
-            <div className="flex flex-col gap-1">
-              {sortedSavedRuns.map((run) => (
-                <div
-                  key={run.id}
-                  className="group flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-border-light bg-transparent hover:bg-surface hover:border-border transition-colors"
-                >
-                  <button
-                    onClick={() => handleUseSavedRun(run)}
-                    className="flex-1 text-left text-xs text-text-secondary hover:text-text truncate cursor-pointer bg-transparent border-none p-0"
-                    title={`${run.label}\n${run.command}`}
-                  >
-                    <span className="block truncate font-medium text-text">
-                      {run.label}
-                    </span>
-                    <span className="block truncate font-mono text-[10px] text-text-muted">
-                      {run.command}
-                    </span>
-                  </button>
-
-                  {/* Quick actions */}
-                  <div className="flex gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {/* Run directly */}
-                    <button
-                      onClick={() => handleLaunch(run.command)}
-                      title="Run this command"
-                      className="w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-success hover:bg-success/10 cursor-pointer bg-transparent border-none"
-                    >
-                      <svg
-                        width="8"
-                        height="8"
-                        viewBox="0 0 8 8"
-                        fill="none"
-                        aria-hidden="true"
-                      >
-                        <path d="M1 0.5v7l6.5-3.5L1 0.5z" fill="currentColor" />
-                      </svg>
-                    </button>
-                    {/* Delete */}
-                    <button
-                      onClick={() => removeSavedRun(run.id)}
-                      title="Remove saved run"
-                      className="w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-danger hover:bg-danger/10 cursor-pointer bg-transparent border-none"
-                    >
-                      <svg
-                        width="8"
-                        height="8"
-                        viewBox="0 0 8 8"
-                        fill="none"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M1 1l6 6M7 1l-6 6"
-                          stroke="currentColor"
-                          strokeWidth="1.2"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Current run info */}
-        {activeSession && (
-          <div className="mt-auto pt-3 border-t border-border-light">
-            <div className="text-[11px] text-text-muted mb-1">Running as</div>
-            <div className="text-xs font-medium text-text">
-              varlock run -- {activeSession.command}
-            </div>
-            <div className="text-[11px] text-text-muted mt-0.5">
-              with {activeSession.env} env
-            </div>
-          </div>
         )}
       </div>
 
-      {/* Terminal area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Tab bar */}
-        <TerminalTabs />
+      {/* Tab bar */}
+      {sessions.length > 0 && <TerminalTabs />}
 
-        {/* Terminal instances */}
-        <div className="flex-1 relative overflow-hidden">
-          {sessions.length === 0 ? (
-            <div className="flex items-center justify-center h-full bg-[#1a1a18]">
-              <div className="text-center">
-                <div className="w-10 h-10 rounded-lg bg-[#2a2a28] flex items-center justify-center mx-auto mb-3">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    className="text-[#97C459]"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M3 3l4 4-4 4M9 13h4"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-                <p className="text-sm text-[#666]">
-                  Select an environment and command, then click Launch
-                </p>
+      {/* Terminal instances */}
+      <div className="flex-1 relative overflow-hidden">
+        {sessions.length === 0 ? (
+          <div className="flex items-center justify-center h-full bg-[#1C1C1E]">
+            <div className="text-center">
+              <div className="w-10 h-10 rounded-xl bg-[#2C2C2E] flex items-center justify-center mx-auto mb-3">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  className="text-[#34C759]"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M3 3l4 4-4 4M9 13h4"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </div>
+              <p className="text-sm text-[#98989D] mb-1">
+                Enter a command above and click Run
+              </p>
+              <p className="text-xs text-[#636366]">
+                Your command runs with <span className="text-[#0A84FF]">{activeEnv}</span> environment variables injected by Varlock
+              </p>
             </div>
-          ) : (
-            sessions.map((session) => (
-              <div
-                key={session.id}
-                className={`absolute inset-0 ${
-                  session.id === activeSessionId ? "block" : "hidden"
-                }`}
-              >
-                <TerminalInstance
-                  ref={(handle) => handleTerminalRef(session.id, handle)}
-                />
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Validation bar */}
-        {activeSession && activeSession.status === "running" && (
-          <ValidationBar onStop={handleStop} />
+          </div>
+        ) : (
+          sessions.map((session) => (
+            <div
+              key={session.id}
+              className={`absolute inset-0 ${
+                session.id === activeSessionId ? "block" : "hidden"
+              }`}
+            >
+              <TerminalInstance
+                ref={(handle) => handleTerminalRef(session.id, handle)}
+              />
+            </div>
+          ))
         )}
       </div>
 
@@ -403,7 +322,7 @@ function ProductionWarningModal({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-[2px]"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="prod-warning-title"
@@ -411,10 +330,10 @@ function ProductionWarningModal({
         if (e.target === e.currentTarget) onCancel();
       }}
     >
-      <div className="bg-surface rounded-xl shadow-[0_28px_80px_rgba(0,0,0,0.45)] border border-border w-full max-w-sm mx-4">
+      <div className="bg-surface rounded-2xl shadow-lg border border-border-light w-full max-w-sm mx-4 animate-scale-in">
         {/* Header */}
         <div className="px-5 py-4 border-b border-border-light flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-danger/20 flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-danger-light flex items-center justify-center shrink-0">
             <svg
               width="16"
               height="16"
@@ -469,7 +388,7 @@ function ProductionWarningModal({
           </button>
           <button
             onClick={onConfirm}
-            className="px-4 py-2 text-xs text-white bg-danger border border-danger rounded-lg hover:bg-danger-dark transition-colors cursor-pointer"
+            className="px-4 py-2 text-xs text-white bg-danger rounded-lg hover:bg-danger-dark transition-colors cursor-pointer shadow-sm"
           >
             Launch in {env}
           </button>
