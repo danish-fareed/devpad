@@ -1,21 +1,30 @@
 mod commands;
 mod state;
 mod varlock;
+mod vault;
 
 use commands::filesystem::WatcherState;
 use state::app_state::AppState;
 use state::process_state::ProcessState;
+use state::vault_state::VaultState;
+use vault::vault_db::VaultDb;
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Open (or create) the vault database
+    let vault_db = VaultDb::open().expect("Failed to open vault database");
+    let vault_state = VaultState::new(vault_db);
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .manage(AppState::new())
         .manage(ProcessState::new())
         .manage(WatcherState::new())
+        .manage(vault_state)
         .invoke_handler(tauri::generate_handler![
+            // Existing commands
             commands::varlock::check_varlock,
             commands::varlock::install_varlock,
             commands::varlock::varlock_load,
@@ -38,12 +47,55 @@ pub fn run() {
             commands::filesystem::write_project_file,
             commands::filesystem::watch_project,
             commands::filesystem::unwatch_project,
+            // Vault commands
+            commands::vault::vault_status,
+            commands::vault::vault_setup,
+            commands::vault::vault_unlock,
+            commands::vault::vault_auto_unlock,
+            commands::vault::vault_lock,
+            commands::vault::vault_is_unlocked,
+            commands::vault::vault_import_env,
+            commands::vault::vault_get_variables,
+            commands::vault::vault_set_variable,
+            commands::vault::vault_delete_variable,
+            commands::vault::vault_generate_secret,
+            commands::vault::vault_resolve_env,
+            commands::vault::vault_write_ref_env,
+            commands::vault::vault_forget_device,
+            // AI Context commands
+            commands::ai_context::ai_context_json,
+            commands::ai_context::ai_context_markdown,
+            commands::ai_context::ai_context_data,
         ])
+        .setup(|app| {
+            // Start background idle timeout checker
+            let handle = app.handle().clone();
+            std::thread::spawn(move || {
+                loop {
+                    std::thread::sleep(std::time::Duration::from_secs(30));
+                    if let Some(vault) = handle.try_state::<VaultState>() {
+                        vault.check_idle_timeout();
+                    }
+                }
+            });
+            Ok(())
+        })
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { .. } = event {
-                window.state::<ProcessState>().kill_all();
+            match event {
+                tauri::WindowEvent::CloseRequested { .. } => {
+                    // Kill running processes
+                    window.state::<ProcessState>().kill_all();
+                    // Lock the vault (zeroize key)
+                    window.state::<VaultState>().lock();
+                }
+                tauri::WindowEvent::Focused(false) => {
+                    // Window lost focus — could start the idle timer
+                    // (the background thread handles the actual timeout)
+                }
+                _ => {}
             }
         })
         .run(tauri::generate_context!())
         .expect("error while running Varlock UI");
 }
+

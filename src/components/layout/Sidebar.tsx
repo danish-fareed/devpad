@@ -6,8 +6,8 @@ import { useState } from "react";
 import type { AppView } from "@/lib/types";
 
 /**
- * macOS Finder-style collapsible sidebar with navigation and project list.
- * Nav items: Dashboard, Terminal, Settings. Projects with folder icons.
+ * macOS Finder-style collapsible sidebar.
+ * Nav: Dashboard + Vault. Settings moved to TopBar popup.
  */
 export function Sidebar() {
   const projects = useProjectStore((s) => s.projects);
@@ -29,21 +29,12 @@ export function Sidebar() {
       ),
     },
     {
-      id: "terminal",
-      label: "Terminal",
+      id: "vault",
+      label: "Vault",
       icon: (
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <path d="M3 3.5l3.5 3.5L3 10.5M8 10.5h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      ),
-    },
-    {
-      id: "settings",
-      label: "Settings",
-      icon: (
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.2" />
-          <path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.87 2.87l1.06 1.06M10.07 10.07l1.06 1.06M2.87 11.13l1.06-1.06M10.07 3.93l1.06-1.06" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+          <path d="M7 1L2 3.5v4C2 10.5 7 13 7 13s5-2.5 5-5.5v-4L7 1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+          <path d="M5.5 7l1.5 1.5 2-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       ),
     },
@@ -161,7 +152,7 @@ export function Sidebar() {
       </div>
 
       {/* Section label */}
-      <div className="px-4 pt-4 pb-1">
+      <div className="px-4 pt-3 pb-1">
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">
             Projects

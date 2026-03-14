@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useProjectStore } from "@/stores/projectStore";
 import { useVarlockCommand } from "@/hooks/useVarlockCommand";
+import { useVaultStore } from "@/stores/vaultStore";
+import { VaultUnlockScreen } from "@/components/vault/VaultUnlockScreen";
 import type { VarlockStatus } from "@/lib/types";
 
 export default function App() {
@@ -14,14 +16,21 @@ export default function App() {
   const [installError, setInstallError] = useState<string | null>(null);
   const [checking, setChecking] = useState(true);
 
+  const vaultStatus = useVaultStore((s) => s.status);
+  const checkVaultStatus = useVaultStore((s) => s.checkStatus);
+  const tryAutoUnlock = useVaultStore((s) => s.tryAutoUnlock);
+
   useEffect(() => {
     const init = async () => {
       try {
         const status = await checkVarlock();
         setVarlockStatus(status);
         await loadProjects();
+        // Check vault status
+        await checkVaultStatus();
+        // Try auto-unlock from keychain
+        await tryAutoUnlock();
       } catch {
-        // checkVarlock itself may fail if invoke is not available (dev mode)
         setVarlockStatus({ installed: false, version: null, path: null });
       } finally {
         setChecking(false);
@@ -100,6 +109,12 @@ export default function App() {
     );
   }
 
+  // Vault unlock gate — show unlock screen if vault needs setup or is locked
+  if (vaultStatus && (!vaultStatus.initialized || !vaultStatus.unlocked)) {
+    return <VaultUnlockScreen />;
+  }
+
   // Main app
   return <AppLayout />;
 }
+

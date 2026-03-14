@@ -70,6 +70,8 @@ export function resolveTheme(mode: ThemeMode): "light" | "dark" {
 interface SettingsState extends AppSettings {
   /** The resolved theme (light or dark), accounting for "system" preference */
   resolvedTheme: "light" | "dark";
+  /** Whether the terminal bottom pane is open (ephemeral — always false on launch) */
+  terminalOpen: boolean;
 
   // Actions
   setTheme: (theme: ThemeMode) => void;
@@ -77,6 +79,8 @@ interface SettingsState extends AppSettings {
   setSidebarCollapsed: (collapsed: boolean) => void;
   setTerminalFontSize: (size: number) => void;
   setTerminalScrollback: (lines: number) => void;
+  toggleTerminal: () => void;
+  setTerminalOpen: (open: boolean) => void;
   /** Re-resolve theme (call when system preference changes) */
   syncSystemTheme: () => void;
 }
@@ -87,6 +91,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
   return {
     ...initial,
     resolvedTheme: resolveTheme(initial.theme),
+    terminalOpen: false, // Always starts closed — ephemeral state
 
     setTheme: (theme) => {
       const resolved = resolveTheme(theme);
@@ -128,6 +133,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
         set({ resolvedTheme: resolved });
         applyThemeClass(resolved);
       }
+    },
+
+    toggleTerminal: () => {
+      set({ terminalOpen: !get().terminalOpen });
+    },
+
+    setTerminalOpen: (open) => {
+      set({ terminalOpen: open });
     },
   };
 });

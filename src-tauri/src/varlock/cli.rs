@@ -49,6 +49,47 @@ fn truncate_output(s: &str, max_len: usize) -> String {
     }
 }
 
+/// Try to extract a JSON object from a string that may contain non-JSON text.
+/// Finds the first `{` and last `}` and returns the substring between them.
+fn extract_json(s: &str) -> Option<&str> {
+    let start = s.find('{')?;
+    let end = s.rfind('}')?;
+    if end > start {
+        Some(&s[start..=end])
+    } else {
+        None
+    }
+}
+
+/// Extract a user-friendly error message from human-readable CLI output.
+/// Strips emoji prefixes, blank lines, and formatting to produce a clean message.
+fn extract_friendly_error(output: &str) -> String {
+    let lines: Vec<&str> = output
+        .lines()
+        .map(|l| l.trim())
+        .filter(|l| !l.is_empty())
+        // Strip common emoji-heavy header/footer lines
+        .filter(|l| !l.starts_with("🚨") && !l.starts_with("💥"))
+        .collect();
+
+    if lines.is_empty() {
+        return String::new();
+    }
+
+    // Clean each line: remove leading emoji/symbol characters
+    let cleaned: Vec<String> = lines
+        .iter()
+        .map(|l| {
+            l.trim_start_matches(|c: char| !c.is_ascii_alphanumeric() && c != '-')
+                .trim()
+                .to_string()
+        })
+        .filter(|l| !l.is_empty())
+        .collect();
+
+    cleaned.join("\n")
+}
+
 /// Check if varlock is installed and return its version.
 pub async fn check_installed() -> VarlockStatus {
     match find_varlock_binary(None).await {
@@ -159,15 +200,27 @@ pub async fn load(cwd: &str, env: Option<&str>) -> Result<VarlockLoadResult, Str
                 );
             }
 
-            serde_json::from_str::<VarlockLoadFullResult>(&stdout)
-                .map(|result| result.into_load_result(env.unwrap_or("development").to_string()))
-                .map_err(|e| {
-                    format!(
-                        "Failed to parse varlock output: {}. Raw output: {}",
-                        e,
-                        truncate_output(&combined_output, 500)
-                    )
-                })
+            // The CLI may mix human-readable output with JSON.
+            // Try to find JSON in stdout by locating the outermost { ... }.
+            let json_str = extract_json(trimmed_stdout).unwrap_or(trimmed_stdout);
+
+            match serde_json::from_str::<VarlockLoadFullResult>(json_str) {
+                Ok(result) => Ok(result.into_load_result(env.unwrap_or("development").to_string())),
+                Err(e) => {
+                    // No valid JSON found — the CLI printed a human-readable error.
+                    // Try to present a clean message instead of a parse error.
+                    let friendly = extract_friendly_error(&combined_output);
+                    if !friendly.is_empty() {
+                        Err(friendly)
+                    } else {
+                        Err(format!(
+                            "Failed to parse varlock output: {}. Raw output: {}",
+                            e,
+                            truncate_output(&combined_output, 500)
+                        ))
+                    }
+                }
+            }
         }
         _ => {
             let code_str = exit_code

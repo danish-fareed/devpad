@@ -24,3 +24,17 @@ notify = "7"
 notify-debouncer-mini = "0.5"
 dirs = "6"
 log = "0.4"
+thiserror = "2"
+
+# Vault crypto
+chacha20poly1305 = "0.10"
+argon2 = "0.5"
+hkdf = "0.12"
+sha2 = "0.10"
+rand = "0.8"
+zeroize = { version = "1", features = ["derive"] }
+
+# Vault storage
+rusqlite = { version = "0.31", features = ["bundled"] }
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
+chrono = { version = "0.4", features = ["serde"] }

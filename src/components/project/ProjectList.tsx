@@ -34,7 +34,10 @@ export function ProjectList() {
           key={project.id}
           project={project}
           isActive={activeProject?.id === project.id}
-          onClick={() => setActiveProject(project)}
+          onClick={() => {
+            setActiveProject(project);
+            useProjectStore.getState().setView("dashboard");
+          }}
         />
       ))}
     </div>

@@ -1,5 +1,10 @@
+import { useState, useRef, useEffect } from "react";
 import type { MergedVariable } from "@/lib/types";
 import { TYPE_BADGE_STYLES, DEFAULT_TYPE_BADGE } from "@/lib/constants";
+import { useVaultStore } from "@/stores/vaultStore";
+import { useProjectStore } from "@/stores/projectStore";
+import { useEnvironmentStore } from "@/stores/environmentStore";
+import { readEnvFile, writeEnvFile } from "@/lib/commands";
 
 interface VariableRowProps {
   variable: MergedVariable;
@@ -8,9 +13,28 @@ interface VariableRowProps {
 
 /**
  * Single variable row — macOS list item with hover states and clean typography.
+ * Now includes a "Store in Vault" context action.
  */
 export function VariableRow({ variable, onSelect }: VariableRowProps) {
   const typeBadge = TYPE_BADGE_STYLES[variable.type] ?? DEFAULT_TYPE_BADGE;
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  
+  const activeProject = useProjectStore((s) => s.activeProject);
+  const setVariable = useVaultStore((s) => s.setVariable);
+
+  // Example store check - in a real app this would check if the variable exists in the vault
+  const [isStoreMode, setIsStoreMode] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const statusClass = !variable.valid
     ? "bg-danger-light text-danger-dark"
@@ -35,48 +59,162 @@ export function VariableRow({ variable, onSelect }: VariableRowProps) {
       variable.value
     );
 
+  const handleStoreInVault = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    
+    if (!variable.value || !activeProject) return;
+
+    try {
+      // 1. Store the raw value in the vault
+      await setVariable(
+        activeProject.id,
+        "default", // Assuming default env for now, could be dynamic
+        variable.key,
+        variable.value,
+        variable.type,
+        true // mark as sensitive
+      );
+
+      // 2. Read the current .env file
+      const envPath = `${activeProject.path}/.env`;
+      const envContent = await readEnvFile(envPath);
+
+      // 3. Replace the value with a varlock reference
+      const lines = envContent.split("\n");
+      const newLines = lines.map((line) => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith("#") || !trimmed.includes("=")) return line;
+        
+        // Handle "export KEY=value" or just "KEY=value"
+        const isExport = trimmed.startsWith("export ");
+        const contentStr = isExport ? trimmed.slice(7) : trimmed;
+        
+        const eqIdx = contentStr.indexOf("=");
+        if (eqIdx < 0) return line;
+        
+        const key = contentStr.slice(0, eqIdx).trim();
+        if (key === variable.key) {
+          // Keep original indentation/export prefix
+          const prefix = isExport ? "export " : "";
+          const refUri = `varlock://vault/${variable.key}`;
+          // Preserve any comments after the value (very basic implementation)
+          const commentIdx = contentStr.indexOf("#", eqIdx);
+          const comment = commentIdx > -1 ? ` ${contentStr.slice(commentIdx)}` : "";
+          return `${prefix}${key}=${refUri}${comment}`;
+        }
+        return line;
+      });
+
+      // 4. Write back to disk
+      await writeEnvFile(envPath, newLines.join("\n"));
+
+      // 5. Trigger a reload of the environment so the UI updates
+      useEnvironmentStore.getState().loadEnvironment(activeProject.path);
+      
+    } catch (e) {
+      console.error("Failed to store variable in vault:", e);
+      // In a real app we'd show a toast notification here
+    }
+  };
+
   return (
-    <button
-      type="button"
-      onClick={() => onSelect?.(variable)}
-      className="w-full text-left grid grid-cols-[200px_1fr_80px_90px] px-4 py-2.5 gap-3 items-center hover:bg-surface-secondary/80 active:bg-surface-secondary transition-colors cursor-pointer border-none bg-transparent"
-    >
-      {/* Key */}
-      <div className="font-mono text-[12px] font-medium text-text truncate">
-        {variable.key}
-      </div>
+    <div className="group relative">
+      <button
+        type="button"
+        onClick={() => onSelect?.(variable)}
+        className="w-full text-left grid grid-cols-[200px_1fr_80px_90px] px-4 py-2.5 gap-3 items-center hover:bg-surface-secondary/80 active:bg-surface-secondary transition-colors cursor-pointer border-none bg-transparent"
+      >
+        {/* Key */}
+        <div className="font-mono text-[12px] font-medium text-text truncate flex items-center gap-1.5">
+          {isStoreMode && (
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="text-accent shrink-0">
+              <path d="M7 1L2 3.5v4C2 10.5 7 13 7 13s5-2.5 5-5.5v-4L7 1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+            </svg>
+          )}
+          <span className="truncate">{variable.key}</span>
+        </div>
 
-      {/* Value */}
-      <div className="font-mono text-[12px] text-text-secondary truncate">
-        {displayValue}
-      </div>
+        {/* Value */}
+        <div className="font-mono text-[12px] text-text-secondary truncate">
+          {displayValue}
+        </div>
 
-      {/* Type badge */}
-      <div className="flex items-center gap-1">
-        <span
-          className="text-[10px] font-medium px-1.5 py-[2px] rounded-md"
-          style={{ backgroundColor: typeBadge.bg, color: typeBadge.text }}
-        >
-          {variable.type}
-        </span>
-        {!variable.hasSchema && (
+        {/* Type badge */}
+        <div className="flex items-center gap-1">
           <span
-            className="text-[9px] text-text-muted"
-            title="Type inferred — not confirmed in .env.schema"
+            className="text-[10px] font-medium px-1.5 py-[2px] rounded-md"
+            style={{ backgroundColor: typeBadge.bg, color: typeBadge.text }}
           >
-            *
+            {variable.type}
           </span>
-        )}
+          {!variable.hasSchema && (
+            <span
+              className="text-[9px] text-text-muted"
+              title="Type inferred — not confirmed in .env.schema"
+            >
+              *
+            </span>
+          )}
+        </div>
+
+        {/* Status badge */}
+        <div className="flex justify-end">
+          <span
+            className={`text-[10px] font-medium px-1.5 py-[2px] rounded-md truncate ${statusClass}`}
+          >
+            {statusLabel}
+          </span>
+        </div>
+      </button>
+
+      {/* Action Menu Trigger (visible on hover) */}
+      <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowMenu(!showMenu);
+          }}
+          className="w-6 h-6 rounded-md bg-surface-tertiary text-text-secondary hover:text-text hover:bg-border flex items-center justify-center cursor-pointer border-none shadow-sm"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <circle cx="7" cy="3" r="1.5" fill="currentColor" />
+            <circle cx="7" cy="7" r="1.5" fill="currentColor" />
+            <circle cx="7" cy="11" r="1.5" fill="currentColor" />
+          </svg>
+        </button>
       </div>
 
-      {/* Status badge */}
-      <div className="flex justify-end">
-        <span
-          className={`text-[10px] font-medium px-1.5 py-[2px] rounded-md truncate ${statusClass}`}
+      {/* Context Menu */}
+      {showMenu && (
+        <div 
+          ref={menuRef}
+          className="absolute right-4 top-[calc(100%-8px)] z-10 w-40 bg-surface rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.1),0_0_0_1px_rgba(0,0,0,0.05)] py-1 animate-scale-in origin-top-right"
+          onClick={(e) => e.stopPropagation()}
         >
-          {statusLabel}
-        </span>
-      </div>
-    </button>
+          {!isStoreMode ? (
+            <button
+              onClick={handleStoreInVault}
+              className="w-full text-left px-3 py-1.5 text-[12px] text-text hover:bg-accent hover:text-white cursor-pointer border-none bg-transparent flex items-center gap-2"
+            >
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="opacity-70">
+                <path d="M7 1L2 3.5v4C2 10.5 7 13 7 13s5-2.5 5-5.5v-4L7 1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+              </svg>
+              Store in Vault
+            </button>
+          ) : (
+             <button
+              onClick={(e) => { e.stopPropagation(); setIsStoreMode(false); setShowMenu(false); }}
+              className="w-full text-left px-3 py-1.5 text-[12px] text-text hover:bg-danger hover:text-white cursor-pointer border-none bg-transparent flex items-center gap-2"
+            >
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="opacity-70">
+                <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              </svg>
+              Remove from Vault
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

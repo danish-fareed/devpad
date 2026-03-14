@@ -20,7 +20,7 @@ interface ProjectState {
   addProject: (path: string) => Promise<Project>;
   removeProject: (id: string) => Promise<void>;
   refreshActiveProject: () => Promise<void>;
-  setView: (view: AppView) => void;
+  setView: (view: string) => void;
   clearError: () => void;
 }
 
@@ -93,6 +93,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     await get().loadProjects();
   },
 
-  setView: (view) => set({ view }),
+  setView: (view: string) => {
+    // Sanitize stale view values from old sessions
+    const sanitized: AppView =
+      view === "terminal" ? "dashboard" :
+      view === "settings" ? "dashboard" :
+      view === "security" ? "vault" :
+      (view as AppView);
+    set({ view: sanitized });
+  },
   clearError: () => set({ error: null }),
 }));

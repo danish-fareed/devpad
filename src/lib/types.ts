@@ -81,7 +81,28 @@ export interface TerminalSession {
 
 // ── UI view state ──
 
-export type AppView = "dashboard" | "terminal" | "settings";
+export type AppView = "dashboard" | "vault";
+
+// ── Vault types ──
+
+export interface VaultStatusResult {
+  initialized: boolean;
+  unlocked: boolean;
+  hasKeychainKey: boolean;
+}
+
+export interface VaultVariable {
+  key: string;
+  value: string;
+  env: string;
+  varType: string;
+  sensitive: boolean;
+  required: boolean;
+  description: string;
+}
+
+export type SecretType = "hex" | "base64" | "uuid" | "alphanumeric" | "password";
+
 
 // ── Schema editing types ──
 
