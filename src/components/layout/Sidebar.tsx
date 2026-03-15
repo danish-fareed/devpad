@@ -110,12 +110,9 @@ export function Sidebar() {
       {/* Drag region / brand header */}
       <div data-tauri-drag-region className="no-select px-4 pt-4 pb-2">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 flex items-center justify-center">
-            <img src="/icon.svg" alt="Devpad Logo" className="w-full h-full object-contain" />
+          <div className="h-5 flex items-center justify-center">
+            <img src="/logo.svg" alt="Devpad Logo" className="h-full w-auto object-contain text-text" />
           </div>
-          <span className="text-[14px] font-bold text-text tracking-tight">
-            Devpad
-          </span>
           <div className="ml-auto flex items-center gap-1">
             <button
               onClick={toggleSidebar}

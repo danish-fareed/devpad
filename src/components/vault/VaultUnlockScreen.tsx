@@ -59,15 +59,11 @@ export function VaultUnlockScreen() {
       <div className="w-full max-w-sm px-6 animate-fade-in">
         <div className="bg-surface rounded-2xl border border-border-light shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-8">
           {/* Devpad logo */}
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <img src="/icon.svg" alt="Devpad Logo" className="w-full h-full object-contain drop-shadow-sm" />
+          <div className="h-8 flex items-center justify-center mx-auto mb-6">
+            <img src="/logo.svg" alt="Devpad Logo" className="h-full w-auto object-contain text-text" />
           </div>
 
-          <h1 className="text-xl font-semibold text-text text-center mb-2">
-            {isSetup ? "Create Your Vault" : "Unlock Vault"}
-          </h1>
-
-          <p className="text-sm text-text-secondary text-center mb-8 leading-relaxed">
+          <p className="text-sm text-text-secondary text-center mb-5 leading-relaxed">
             {isSetup
               ? "Set a master password to encrypt your environment secrets."
               : "Enter your master password to access your encrypted environment variables."}
@@ -164,4 +160,3 @@ export function VaultUnlockScreen() {
     </div>
   );
 }
-
