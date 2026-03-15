@@ -5,6 +5,7 @@ use std::sync::Mutex;
 use notify::Watcher;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
+use crate::state::app_state::AppState;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -83,22 +84,63 @@ fn default_editable_file_names() -> Vec<&'static str> {
     ]
 }
 
-/// Read the contents of an .env file.
-#[tauri::command]
-pub async fn read_env_file(path: String) -> Result<String, String> {
+/// Validate that a file path is safe to access:
+/// 1. Canonicalize (resolves ../, symlinks)
+/// 2. Must be inside a registered project directory
+/// 3. Filename must start with .env
+fn validate_env_file_path(path: &str, project_paths: &[PathBuf]) -> Result<PathBuf, String> {
     if path.trim().is_empty() {
         return Err("File path cannot be empty".to_string());
     }
-    fs::read_to_string(&path).map_err(|e| format!("Failed to read {}: {}", path, e))
+
+    let target = Path::new(path);
+    if !target.exists() {
+        return Err(format!("Path does not exist: {}", path));
+    }
+
+    // Step 1: canonicalize resolves all ../, symlinks, and encoding tricks
+    let canonical = target
+        .canonicalize()
+        .map_err(|_| "Path does not exist or is not accessible".to_string())?;
+
+    // Step 2: must be inside a registered project directory
+    let in_known_project = project_paths.iter().any(|proj| {
+        proj.canonicalize()
+            .map(|cp| canonical.starts_with(&cp))
+            .unwrap_or(false)
+    });
+    if !in_known_project {
+        return Err("Path is outside any registered project directory".to_string());
+    }
+
+    // Step 3: filename must start with .env
+    let filename = canonical
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("");
+    if !filename.starts_with(".env") {
+        return Err("File must be a .env file".to_string());
+    }
+
+    Ok(canonical)
+}
+
+/// Read the contents of an .env file.
+/// Path must be inside a registered project and filename must start with .env.
+#[tauri::command]
+pub async fn read_env_file(path: String, app_state: tauri::State<'_, AppState>) -> Result<String, String> {
+    let project_paths = app_state.get_project_paths();
+    let validated = validate_env_file_path(&path, &project_paths)?;
+    fs::read_to_string(&validated).map_err(|e| format!("Failed to read {}: {}", validated.display(), e))
 }
 
 /// Write content to an .env file.
+/// Path must be inside a registered project and filename must start with .env.
 #[tauri::command]
-pub async fn write_env_file(path: String, content: String) -> Result<(), String> {
-    if path.trim().is_empty() {
-        return Err("File path cannot be empty".to_string());
-    }
-    fs::write(&path, &content).map_err(|e| format!("Failed to write {}: {}", path, e))
+pub async fn write_env_file(path: String, content: String, app_state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let project_paths = app_state.get_project_paths();
+    let validated = validate_env_file_path(&path, &project_paths)?;
+    fs::write(&validated, &content).map_err(|e| format!("Failed to write {}: {}", validated.display(), e))
 }
 
 /// List all .env* files in a project directory.

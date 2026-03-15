@@ -95,6 +95,15 @@ impl AppState {
         self.lock().projects.clone()
     }
 
+    /// Get all registered project directory paths.
+    pub fn get_project_paths(&self) -> Vec<PathBuf> {
+        self.lock()
+            .projects
+            .iter()
+            .map(|p| PathBuf::from(&p.path))
+            .collect()
+    }
+
     /// Replace all persisted projects and save to disk.
     pub fn replace_projects(&self, projects: Vec<Project>) {
         let mut data = self.lock();

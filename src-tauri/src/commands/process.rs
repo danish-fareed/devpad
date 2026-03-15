@@ -156,3 +156,127 @@ pub async fn process_kill(
 ) -> Result<(), String> {
     process_state.kill(&process_id)
 }
+
+/// Spawn a raw command directly (no varlock wrapping, no shell interpreter).
+/// Uses shell-words to parse the command string into argv — no injection surface.
+/// Used for projects without .env.schema or when varlock isn't needed.
+#[tauri::command]
+pub async fn direct_run(
+    cwd: String,
+    command: String,
+    on_event: Channel<ProcessEvent>,
+    process_state: State<'_, ProcessState>,
+) -> Result<String, String> {
+    let command = command.trim().to_string();
+    if command.is_empty() {
+        return Err("Command cannot be empty".to_string());
+    }
+    if cwd.trim().is_empty() {
+        return Err("Working directory cannot be empty".to_string());
+    }
+
+    // Parse command string into argv without invoking a shell interpreter
+    let argv = shell_words::split(&command)
+        .map_err(|e| format!("Invalid command syntax: {}", e))?;
+    if argv.is_empty() {
+        return Err("Empty command after parsing".to_string());
+    }
+
+    let mut cmd = Command::new(&argv[0]);
+    cmd.args(&argv[1..]);
+    cmd.current_dir(&cwd);
+    cmd.stdout(std::process::Stdio::piped());
+    cmd.stderr(std::process::Stdio::piped());
+
+    #[cfg(target_os = "windows")]
+    {
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("Failed to spawn process: {}", e))?;
+
+    let process_id = uuid::Uuid::new_v4().to_string();
+
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "Failed to capture stdout".to_string())?;
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| "Failed to capture stderr".to_string())?;
+
+    process_state.insert(process_id.clone(), child);
+
+    let pid = process_id.clone();
+    let on_event_clone = on_event.clone();
+    let processes = process_state.shared();
+
+    tokio::spawn(async move {
+        let mut stdout_reader = BufReader::new(stdout).lines();
+        let mut stderr_reader = BufReader::new(stderr).lines();
+        let mut stdout_done = false;
+        let mut stderr_done = false;
+
+        while !stdout_done || !stderr_done {
+            tokio::select! {
+                line = stdout_reader.next_line(), if !stdout_done => {
+                    match line {
+                        Ok(Some(data)) => {
+                            let _ = on_event.send(ProcessEvent::Stdout {
+                                data: format!("{}\r\n", data),
+                            });
+                        }
+                        Ok(None) => { stdout_done = true; }
+                        Err(e) => {
+                            let _ = on_event.send(ProcessEvent::Error {
+                                message: format!("stdout read error: {}", e),
+                            });
+                            stdout_done = true;
+                        }
+                    }
+                }
+                line = stderr_reader.next_line(), if !stderr_done => {
+                    match line {
+                        Ok(Some(data)) => {
+                            let _ = on_event.send(ProcessEvent::Stderr {
+                                data: format!("{}\r\n", data),
+                            });
+                        }
+                        Ok(None) => { stderr_done = true; }
+                        Err(e) => {
+                            let _ = on_event.send(ProcessEvent::Error {
+                                message: format!("stderr read error: {}", e),
+                            });
+                            stderr_done = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        let child = {
+            let mut processes = processes.lock().unwrap_or_else(|e| e.into_inner());
+            processes.remove(&pid)
+        };
+
+        if let Some(mut child) = child {
+            match child.wait().await {
+                Ok(status) => {
+                    let _ = on_event_clone.send(ProcessEvent::Exit {
+                        code: status.code(),
+                    });
+                }
+                Err(e) => {
+                    let _ = on_event_clone.send(ProcessEvent::Error {
+                        message: format!("Process wait error: {}", e),
+                    });
+                }
+            }
+        }
+    });
+
+    Ok(process_id)
+}

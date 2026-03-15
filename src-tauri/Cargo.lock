@@ -761,6 +761,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "dotenvy"
+version = "0.15.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
+
+[[package]]
 name = "dpi"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3446,6 +3452,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "shell-words"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc6fe69c597f9c37bfeeeeeb33da3530379845f10be461a66d16d03eca2ded77"
+
+[[package]]
 name = "shlex"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4489,6 +4501,7 @@ dependencies = [
  "chacha20poly1305",
  "chrono",
  "dirs",
+ "dotenvy",
  "hkdf",
  "keyring",
  "log",
@@ -4499,6 +4512,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "shell-words",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
@@ -4506,6 +4520,7 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "uuid",
+ "windows-sys 0.59.0",
  "zeroize",
 ]
 

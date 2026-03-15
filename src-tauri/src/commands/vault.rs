@@ -8,6 +8,7 @@ use crate::vault::vault_db::VaultVariable;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use std::collections::HashMap;
+use zeroize::Zeroize;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -32,9 +33,19 @@ pub fn vault_status(vault: State<'_, VaultState>) -> Result<VaultStatus, String>
 }
 
 /// First-time vault setup with a master password.
+/// Enforces minimum 12-character password policy.
 #[tauri::command]
 pub fn vault_setup(vault: State<'_, VaultState>, password: String) -> Result<(), String> {
+    // Fix #12: Enforce password strength on the backend
+    crypto::validate_password(&password).map_err(|e| e.to_string())?;
+
     let dek = vault.db.setup(&password).map_err(|e| e.to_string())?;
+
+    // Fix #1: Zeroize password immediately after key derivation
+    // (password is moved into this function, we shadow with a mutable copy to zeroize)
+    let mut pwd_bytes = password.into_bytes();
+    pwd_bytes.zeroize();
+
     vault.store_dek(dek);
     audit::log_unlock(&vault.db);
     Ok(())
@@ -50,9 +61,15 @@ pub fn vault_unlock(
     let dek = vault.db.unlock(&password).map_err(|e| e.to_string())?;
 
     if remember {
-        // Store the DEK bytes in the OS keychain for auto-unlock
-        crate::vault::keyring::store_key(dek.as_bytes())?;
+        // Fix #13: Store the actual password in the keychain, not the raw DEK.
+        // On auto-unlock, we re-derive KEK→DEK from the stored password,
+        // preserving the Argon2id cost bump even if the keychain is compromised.
+        crate::vault::keyring::store_key(password.as_bytes())?;
     }
+
+    // Fix #1: Zeroize password immediately after use
+    let mut pwd_bytes = password.into_bytes();
+    pwd_bytes.zeroize();
 
     vault.store_dek(dek);
     audit::log_unlock(&vault.db);
@@ -60,24 +77,39 @@ pub fn vault_unlock(
 }
 
 /// Try to auto-unlock from the OS keychain.
+/// Fix #13: Retrieves the stored password and re-derives KEK→DEK.
+/// Fix #8: Verifies the DEK before accepting it.
 #[tauri::command]
 pub fn vault_auto_unlock(vault: State<'_, VaultState>) -> Result<bool, String> {
     match crate::vault::keyring::retrieve_key()? {
-        Some(key_bytes) => {
-            if key_bytes.len() != 32 {
-                return Err("Invalid key length in keychain".to_string());
-            }
-            let mut arr = [0u8; 32];
-            arr.copy_from_slice(&key_bytes);
-            let dek = crypto::SecureKey::from_bytes(arr);
+        Some(mut stored_bytes) => {
+            // The keyring now stores the password, not the DEK
+            let password = String::from_utf8(stored_bytes.clone())
+                .map_err(|_| "Invalid UTF-8 in stored credential".to_string())?;
 
-            // Verify the DEK works by checking if the vault is initialized
-            if vault.is_initialized()? {
-                vault.store_dek(dek);
-                audit::log_unlock(&vault.db);
-                Ok(true)
-            } else {
-                Ok(false)
+            // Re-run the full derivation path — same as vault_unlock
+            // This preserves the Argon2id cost on every auto-unlock
+            match vault.db.unlock(&password) {
+                Ok(dek) => {
+                    // Fix #8: Verify the DEK works before trusting it
+                    vault.db.verify_dek(&dek).map_err(|e| e.to_string())?;
+                    vault.store_dek(dek);
+                    audit::log_unlock(&vault.db);
+
+                    // Zeroize password material
+                    stored_bytes.zeroize();
+                    // password is dropped here
+                    let mut pwd_bytes = password.into_bytes();
+                    pwd_bytes.zeroize();
+
+                    Ok(true)
+                }
+                Err(_) => {
+                    // Stored credential is invalid (password changed?) — clear it
+                    stored_bytes.zeroize();
+                    let _ = crate::vault::keyring::delete_key();
+                    Ok(false)
+                }
             }
         }
         None => Ok(false),

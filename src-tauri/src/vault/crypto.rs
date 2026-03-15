@@ -326,18 +326,32 @@ pub fn generate_secret(secret_type: &str, length: Option<usize>) -> String {
     }
 }
 
-/// Generate a random string from a given character set.
+/// Generate a random string from a given character set using rejection sampling.
+/// This eliminates modular bias that occurs with `byte % charset.len()` when
+/// charset.len() doesn't evenly divide 256.
 fn generate_from_charset(charset: &[u8], len: usize) -> String {
+    let charset_len = charset.len();
+    let threshold = 256 - (256 % charset_len); // reject bytes >= this value
     let mut result = Vec::with_capacity(len);
-    let mut random_bytes = vec![0u8; len];
-    OsRng.fill_bytes(&mut random_bytes);
-
-    for byte in random_bytes {
-        let idx = (byte as usize) % charset.len();
-        result.push(charset[idx] as char);
+    let mut buf = [0u8; 1];
+    while result.len() < len {
+        OsRng.fill_bytes(&mut buf);
+        if (buf[0] as usize) < threshold {
+            result.push(charset[buf[0] as usize % charset_len] as char);
+        }
+        // else: discard and retry — removes bias
     }
-
     result.into_iter().collect()
+}
+
+/// Validate a master password meets minimum security requirements.
+pub fn validate_password(password: &str) -> Result<(), CryptoError> {
+    if password.len() < 12 {
+        return Err(CryptoError::InvalidData(
+            "Password must be at least 12 characters".into(),
+        ));
+    }
+    Ok(())
 }
 
 /// Simple base64 encoding (avoid pulling in a full base64 crate).
@@ -505,5 +519,46 @@ mod tests {
         let secret = generate_secret("alphanumeric", Some(32));
         assert_eq!(secret.len(), 32);
         assert!(secret.chars().all(|c| c.is_ascii_alphanumeric()));
+    }
+
+    #[test]
+    fn test_generate_from_charset_no_bias() {
+        let charset = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        let n = 500_000;
+        let generated = generate_from_charset(charset, n);
+
+        let mut freq = std::collections::HashMap::new();
+        for ch in generated.chars() {
+            *freq.entry(ch).or_insert(0u64) += 1;
+        }
+
+        let expected = n as f64 / charset.len() as f64;
+        // 5% tolerance — the old modular bias produces ~25% relative bias
+        // on affected characters, which is 5x larger than this threshold.
+        // With 500k samples (~8065 per char), 3σ ≈ 3.3%, so 5% is reliable.
+        for (ch, count) in &freq {
+            let deviation = (*count as f64 - expected).abs() / expected;
+            assert!(
+                deviation < 0.05,
+                "Character '{}' has {:.1}% deviation (count: {}, expected: {:.0})",
+                ch,
+                deviation * 100.0,
+                count,
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn test_validate_password_short() {
+        assert!(validate_password("").is_err());
+        assert!(validate_password("short").is_err());
+        assert!(validate_password("11chars!!!!").is_err());
+    }
+
+    #[test]
+    fn test_validate_password_valid() {
+        assert!(validate_password("12characters!").is_ok());
+        assert!(validate_password("a-very-long-secure-password-123").is_ok());
     }
 }
