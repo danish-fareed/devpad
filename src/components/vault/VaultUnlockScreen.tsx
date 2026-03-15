@@ -58,14 +58,9 @@ export function VaultUnlockScreen() {
     <div className="h-screen w-screen flex items-center justify-center bg-surface-secondary">
       <div className="w-full max-w-sm px-6 animate-fade-in">
         <div className="bg-surface rounded-2xl border border-border-light shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-8">
-          {/* Shield icon */}
-          <div className="w-14 h-14 rounded-2xl bg-accent-light border border-accent/15 flex items-center justify-center mx-auto mb-6 shadow-sm">
-            <div className="w-6 h-6 rounded-lg bg-accent flex items-center justify-center">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                <path d="M12 8v4M12 16h.01" />
-              </svg>
-            </div>
+          {/* Devpad logo */}
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <img src="/icon.svg" alt="Devpad Logo" className="w-full h-full object-contain drop-shadow-sm" />
           </div>
 
           <h1 className="text-xl font-semibold text-text text-center mb-2">
