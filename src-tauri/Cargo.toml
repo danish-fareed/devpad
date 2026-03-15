@@ -1,7 +1,7 @@
 [package]
-name = "varlock-ui"
+name = "devpad"
 version = "0.1.0"
-description = "A Tauri desktop application for the Varlock CLI"
+description = "Devpad: A secure desktop application and GUI for managing environment variables"
 authors = ["Varlock Team"]
 edition = "2021"
 

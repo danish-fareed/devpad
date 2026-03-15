@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicholasgma/varlock/main/schema.json",
-  "productName": "Varlock",
+  "productName": "Devpad",
   "version": "0.1.0",
   "identifier": "com.varlock.ui",
   "build": {
@@ -13,7 +13,7 @@
     "withGlobalTauri": false,
     "windows": [
       {
-        "title": "Varlock",
+        "title": "Devpad",
         "width": 1200,
         "height": 800,
         "minWidth": 900,

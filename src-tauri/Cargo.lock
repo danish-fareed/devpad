@@ -668,6 +668,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "devpad"
+version = "0.1.0"
+dependencies = [
+ "argon2",
+ "chacha20poly1305",
+ "chrono",
+ "dirs",
+ "dotenvy",
+ "hkdf",
+ "keyring",
+ "log",
+ "notify",
+ "notify-debouncer-mini",
+ "rand 0.8.5",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
+ "shell-words",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "thiserror 2.0.18",
+ "tokio",
+ "uuid",
+ "windows-sys 0.59.0",
+ "zeroize",
+]
+
+[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4491,37 +4522,6 @@ dependencies = [
  "js-sys",
  "serde_core",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "varlock-ui"
-version = "0.1.0"
-dependencies = [
- "argon2",
- "chacha20poly1305",
- "chrono",
- "dirs",
- "dotenvy",
- "hkdf",
- "keyring",
- "log",
- "notify",
- "notify-debouncer-mini",
- "rand 0.8.5",
- "rusqlite",
- "serde",
- "serde_json",
- "sha2",
- "shell-words",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "thiserror 2.0.18",
- "tokio",
- "uuid",
- "windows-sys 0.59.0",
- "zeroize",
 ]
 
 [[package]]

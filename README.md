@@ -1,8 +1,11 @@
-# Varlock UI
+# Devpad
 
-Varlock UI is a secure, local-first environment variable manager and vault. It allows developers to securely manage `.env` files across multiple projects without relying on cloud synchronization.
+Devpad is a secure, local-first environment variable manager and vault. It allows developers to securely manage `.env` files across multiple projects without relying on cloud synchronization.
 
-Built for security and developer experience, Varlock ensures your secrets never leave your machine unless you explicitly export them.
+Built for security and developer experience, Devpad ensures your secrets never leave your machine unless you explicitly export them. It acts as a GUI layer utilizing the zero-trust architecture of **varlock**.
+
+## Attribution
+Devpad is built upon and utilizes the **[varlock](https://github.com/dmno-dev/varlock)** specification by the `dmno-dev` team.
 
 ## Features
 
@@ -18,7 +21,7 @@ Built for security and developer experience, Varlock ensures your secrets never 
 
 ## Architecture
 
-Varlock is built as a generic desktop application using Tauri and Rust:
+Devpad is built as a generic desktop application using Tauri and Rust:
 
 - **Frontend:** React, TypeScript, TailwindCSS
 - **Backend Core:** Rust
@@ -27,7 +30,7 @@ Varlock is built as a generic desktop application using Tauri and Rust:
 
 ## Security
 
-Varlock was designed with defense-in-depth principles. For a complete overview of the threat model and recent security audits, see the `docs/audit` folder.
+Devpad was designed with defense-in-depth principles. For a complete overview of the threat model and recent security audits, see the `docs/audit` folder.
 
 - **Content Security Policy:** Strict CSP enforces isolation between the web UI and Native APIs.
 - **Keyring Protection:** Master credentials are obfuscated before storage in the OS-native Keychain.
@@ -69,4 +72,7 @@ cargo test
 
 ## License
 
-MIT License. See `LICENSE` for details.
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPLv3)**. 
+See the `LICENSE` file for full details. 
+
+This license allows you to self-deploy and modify the software, but requires that any network-accessible service based on this code must also be open-sourced under the AGPLv3.
