@@ -1,3 +1,5 @@
+<img width="1202" height="832" alt="image" src="https://github.com/user-attachments/assets/6f83c9ed-1048-446c-a95f-2dbd5af7f6cd" />
+
 # Devpad
 
 Devpad is a secure, local-first environment variable manager and vault. It allows developers to securely manage `.env` files across multiple projects without relying on cloud synchronization.
