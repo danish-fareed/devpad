@@ -72,6 +72,8 @@ pub fn run() {
             commands::terminal_attach::open_terminal_at,
             commands::terminal_attach::attach_to_process,
             commands::terminal_attach::run_in_terminal,
+            commands::terminal_attach::open_in_editor,
+            commands::terminal_attach::open_in_explorer,
             // AI Context commands
             commands::ai_context::ai_context_json,
             commands::ai_context::ai_context_markdown,

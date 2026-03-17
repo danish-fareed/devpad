@@ -85,6 +85,68 @@ pub fn run_in_terminal(cwd: String, command: String) -> Result<(), String> {
     }
 }
 
+/// Open an external editor at the project path
+#[tauri::command]
+pub fn open_in_editor(cwd: String, editor: String) -> Result<(), String> {
+    let cwd = cwd.trim().to_string();
+    if !std::path::Path::new(&cwd).exists() {
+        return Err(format!("Directory does not exist: {}", cwd));
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        Command::new("cmd")
+            .args(["/C", &editor, &cwd])
+            .creation_flags(0x08000000) // CREATE_NO_WINDOW
+            .spawn()
+            .map_err(|e| format!("Failed to open {} in {}: {}", cwd, editor, e))?;
+    }
+    
+    #[cfg(not(target_os = "windows"))]
+    {
+        Command::new(&editor)
+            .arg(&cwd)
+            .spawn()
+            .map_err(|e| format!("Failed to open {} in {}: {}", cwd, editor, e))?;
+    }
+    
+    Ok(())
+}
+
+/// Open the OS native file explorer at the project path
+#[tauri::command]
+pub fn open_in_explorer(cwd: String) -> Result<(), String> {
+    let cwd = cwd.trim().to_string();
+    if !std::path::Path::new(&cwd).exists() {
+        return Err(format!("Directory does not exist: {}", cwd));
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("explorer")
+            .arg(&cwd)
+            .spawn()
+            .map_err(|e| format!("Failed to open explorer: {}", e))?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg(&cwd)
+            .spawn()
+            .map_err(|e| format!("Failed to open finder: {}", e))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("xdg-open")
+            .arg(&cwd)
+            .spawn()
+            .map_err(|e| format!("Failed to open file manager: {}", e))?;
+    }
+    
+    Ok(())
+}
+
 // ── Platform-specific implementations ──
 
 #[cfg(target_os = "windows")]

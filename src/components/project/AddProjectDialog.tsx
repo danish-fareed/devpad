@@ -106,11 +106,11 @@ export function AddProjectDialog({ onClose }: AddProjectDialogProps) {
     >
       <div
         ref={dialogRef}
-        className="bg-surface rounded-xl shadow-[0_24px_80px_rgba(0,0,0,0.12),0_0_0_1px_rgba(0,0,0,0.06)] w-full max-w-md mx-4 animate-scale-in"
+        className="bg-surface rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.2),0_0_0_1px_rgba(0,0,0,0.08)] w-full max-w-md mx-4 animate-scale-in"
       >
         {/* Header */}
         <div className="px-5 py-4 border-b border-border-light flex items-center justify-between">
-          <h2 id="add-project-title" className="text-[15px] font-semibold text-text">
+          <h2 id="add-project-title" className="text-[15px] font-bold text-text">
             Add Project
           </h2>
           <button
@@ -141,7 +141,7 @@ export function AddProjectDialog({ onClose }: AddProjectDialogProps) {
           <button
             onClick={handlePickDirectory}
             disabled={loading || picking}
-            className="w-full border border-dashed border-border rounded-lg py-5 text-center hover:border-accent hover:bg-accent-light/30 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-surface-sunken"
+            className="w-full border border-dashed border-border rounded-xl py-5 text-center hover:border-accent hover:bg-accent-light/30 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-surface-sunken"
           >
             {selectedPath ? (
               <div>
@@ -194,14 +194,14 @@ export function AddProjectDialog({ onClose }: AddProjectDialogProps) {
         <div className="px-5 py-4 border-t border-border-light flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="h-8 px-4 text-[13px] font-medium text-text border border-border rounded-lg hover:bg-surface-secondary transition-colors cursor-pointer bg-surface"
+            className="h-10 px-4 text-[13px] font-medium text-text border border-border rounded-xl hover:bg-surface-secondary transition-colors cursor-pointer bg-surface"
           >
             Cancel
           </button>
           <button
             onClick={handleAdd}
             disabled={!selectedPath || loading}
-            className="h-8 px-4 text-[13px] font-medium text-white bg-accent border border-accent rounded-lg hover:bg-accent-hover disabled:opacity-50 transition-colors cursor-pointer"
+            className="h-10 px-4 text-[13px] font-bold text-white bg-accent border border-accent rounded-xl hover:bg-accent-dark disabled:opacity-50 transition-colors cursor-pointer"
           >
             {loading ? "Adding..." : "Add Project"}
           </button>

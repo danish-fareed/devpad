@@ -23,7 +23,7 @@ export function Sidebar() {
       id: "dashboard",
       label: "Dashboard",
       icon: (
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <svg width="18" height="18" viewBox="0 0 14 14" fill="none">
           <rect x="1" y="1" width="5" height="5" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
           <rect x="8" y="1" width="5" height="5" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
           <rect x="1" y="8" width="5" height="5" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
@@ -35,7 +35,7 @@ export function Sidebar() {
       id: "vault",
       label: "Vault",
       icon: (
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <svg width="18" height="18" viewBox="0 0 14 14" fill="none">
           <path d="M7 1L2 3.5v4C2 10.5 7 13 7 13s5-2.5 5-5.5v-4L7 1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
           <path d="M5.5 7l1.5 1.5 2-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -46,12 +46,12 @@ export function Sidebar() {
   // Collapsed sidebar — icons only
   if (sidebarCollapsed) {
     return (
-      <div className="w-12 bg-sidebar flex flex-col items-center shrink-0 border-r border-border-light/60">
+      <div className="w-12 bg-surface-secondary flex flex-col items-center shrink-0 border-r border-border-light">
         {/* Drag region + collapse toggle */}
         <div data-tauri-drag-region className="no-select w-full pt-4 pb-2 flex justify-center">
           <button
             onClick={toggleSidebar}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text hover:bg-sidebar-hover transition-colors cursor-pointer bg-transparent border-none"
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text hover:bg-surface-tertiary transition-colors cursor-pointer bg-transparent border-none"
             title="Expand sidebar"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -70,10 +70,10 @@ export function Sidebar() {
                 if (item.id === "dashboard") useProjectStore.getState().setActiveProject(null);
               }}
               title={item.label}
-              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer border-none ${
+              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer border-none ${
                 view === item.id && !useProjectStore.getState().activeProject
-                  ? "bg-accent text-white shadow-sm"
-                  : "bg-transparent text-text-secondary hover:bg-sidebar-hover hover:text-text"
+                  ? "bg-accent text-white shadow-md shadow-accent/20"
+                  : "bg-transparent text-text-secondary hover:bg-surface-tertiary hover:text-text"
               }`}
             >
               {item.icon}
@@ -88,7 +88,7 @@ export function Sidebar() {
         <div className="pb-3">
           <button
             onClick={() => setShowAddDialog(true)}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-text hover:bg-sidebar-hover transition-colors cursor-pointer bg-transparent border-none"
+            className="w-8 h-8 rounded-xl flex items-center justify-center text-text-muted hover:text-text hover:bg-surface-tertiary transition-colors cursor-pointer bg-transparent border-none"
             title="Add project"
           >
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
@@ -106,7 +106,7 @@ export function Sidebar() {
 
   // Expanded sidebar
   return (
-    <div className="w-60 bg-sidebar flex flex-col shrink-0 border-r border-border-light/60">
+    <div className="w-60 bg-surface-secondary flex flex-col shrink-0 border-r border-border-light">
       {/* Drag region / brand header */}
       <div data-tauri-drag-region className="no-select px-4 pt-4 pb-2">
         <div className="flex items-center gap-2.5">
@@ -116,7 +116,7 @@ export function Sidebar() {
           <div className="ml-auto flex items-center gap-1">
             <button
               onClick={toggleSidebar}
-              className="w-6 h-6 rounded-md flex items-center justify-center text-text-muted hover:text-text hover:bg-sidebar-hover transition-colors cursor-pointer bg-transparent border-none"
+              className="w-6 h-6 rounded-md flex items-center justify-center text-text-muted hover:text-text hover:bg-surface-tertiary transition-colors cursor-pointer bg-transparent border-none"
               title="Collapse sidebar"
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -137,14 +137,14 @@ export function Sidebar() {
                 setView(item.id);
                 if (item.id === "dashboard") useProjectStore.getState().setActiveProject(null);
               }}
-              className={`flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg cursor-pointer transition-all border-none w-full text-left ${
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all border w-full text-left ${
                 view === item.id && (item.id !== 'dashboard' || !useProjectStore.getState().activeProject)
-                  ? "bg-accent text-white shadow-[0_1px_3px_rgba(10,132,255,0.25)]"
-                  : "bg-transparent text-text-secondary hover:bg-sidebar-hover hover:text-text"
+                  ? "bg-accent/10 border-accent/20 text-text font-semibold"
+                  : "bg-transparent border-transparent text-text-secondary hover:bg-surface-tertiary hover:text-text font-medium"
               }`}
             >
-              <span className="shrink-0">{item.icon}</span>
-              <span className="text-[13px] font-medium">{item.label}</span>
+              <span className="shrink-0 flex items-center justify-center w-5 h-5">{item.icon}</span>
+              <span className="text-[14px]">{item.label}</span>
             </button>
           ))}
         </div>
@@ -153,7 +153,7 @@ export function Sidebar() {
       {/* Section label */}
       <div className="px-4 pt-3 pb-1">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">
+          <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider">
             Projects
           </span>
           <span className="text-[11px] text-text-muted tabular-nums">
@@ -163,7 +163,7 @@ export function Sidebar() {
       </div>
 
       {/* Project list */}
-      <div className="flex-1 overflow-auto px-2">
+      <div className="flex-1 overflow-auto px-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
         <ProjectList />
       </div>
 
@@ -171,7 +171,7 @@ export function Sidebar() {
       <div className="p-2.5">
         <button
           onClick={() => setShowAddDialog(true)}
-          className="w-full py-2 rounded-lg bg-transparent text-text-secondary text-[12px] font-medium flex items-center justify-center gap-1.5 hover:bg-sidebar-hover active:bg-sidebar-active transition-colors cursor-pointer border-none"
+          className="w-full py-2 rounded-xl bg-transparent text-text-muted text-[13px] font-medium flex items-center justify-center gap-1.5 hover:bg-surface-tertiary hover:text-text transition-colors cursor-pointer border-none"
         >
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
             <path
@@ -210,10 +210,10 @@ function RunningSection({ running }: { running: Record<string, RunningCommandInf
     <div className="px-2 pb-2">
       <div className="px-2 pt-2 pb-1">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-medium text-text-muted uppercase tracking-wider">
+          <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider">
             Running now
           </span>
-          <span className="text-[10px] text-success-dark tabular-nums">
+          <span className="text-[11px] text-success-dark tabular-nums">
             {runningEntries.length}
           </span>
         </div>
@@ -222,7 +222,7 @@ function RunningSection({ running }: { running: Record<string, RunningCommandInf
         {runningEntries.map((entry) => (
           <div
             key={entry.commandId}
-            className="flex items-center gap-2 py-1.5 px-2.5 rounded-md hover:bg-sidebar-hover transition-colors group cursor-default"
+            className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg hover:bg-surface-tertiary transition-colors group cursor-default"
           >
             <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse-soft shrink-0" />
             <span className="text-[11px] text-text truncate flex-1">
@@ -234,7 +234,7 @@ function RunningSection({ running }: { running: Record<string, RunningCommandInf
                   commands.openTerminalAt(activeProject.path);
                 }
               }}
-              className="w-5 h-5 rounded flex items-center justify-center text-text-muted opacity-0 group-hover:opacity-100 hover:text-text hover:bg-sidebar-active transition-all cursor-pointer bg-transparent border-none shrink-0"
+              className="w-5 h-5 rounded flex items-center justify-center text-text-muted opacity-0 group-hover:opacity-100 hover:text-text hover:bg-border-light transition-all cursor-pointer bg-transparent border-none shrink-0"
               title="Open terminal"
             >
               <svg width="9" height="9" viewBox="0 0 11 11" fill="none">

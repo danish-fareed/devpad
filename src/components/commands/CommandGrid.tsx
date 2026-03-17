@@ -159,18 +159,20 @@ export function CommandGrid() {
       </div>
 
       {/* Grouped command list */}
-      {Array.from(groups.entries()).map(([category, cmds]) => (
-        <div key={category}>
-          <div className="text-[10px] font-medium text-text-muted uppercase tracking-wider mb-1.5 px-1">
-            {CATEGORY_LABELS[category] || category}
+      <div className="flex flex-col gap-4">
+        {Array.from(groups.entries()).map(([category, cmds]) => (
+          <div key={category} className="bg-surface rounded-xl p-3 border border-border-light">
+            <div className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2.5 px-1">
+              {CATEGORY_LABELS[category] || category}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {cmds.map((cmd) => (
+                <CommandCard key={cmd.id} command={cmd} />
+              ))}
+            </div>
           </div>
-          <div className="flex flex-col gap-1.5">
-            {cmds.map((cmd) => (
-              <CommandCard key={cmd.id} command={cmd} />
-            ))}
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
 
       {showAddModal && <AddCommandModal onClose={() => setShowAddModal(false)} />}
     </div>

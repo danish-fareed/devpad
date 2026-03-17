@@ -11,8 +11,9 @@ import { ScanResultsPanel } from "@/components/scan/ScanResultsPanel";
 import { DashboardPage } from "@/components/dashboard/DashboardPage";
 import { VaultPage } from "@/components/vault/VaultPage";
 import { CommandGrid } from "@/components/commands/CommandGrid";
-import { EnvSelectorBar } from "@/components/commands/EnvSelectorBar";
 import { useScanStore } from "@/stores/scanStore";
+import { FolderOpen, Code, TextCursorInput } from "lucide-react";
+import * as commands from "@/lib/commands";
 
 /**
  * Root layout — sidebar + main content.
@@ -31,7 +32,7 @@ export function AppLayout() {
       <Sidebar />
 
       {/* Main content area */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-surface rounded-tl-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+      <div className="flex-1 flex flex-col overflow-hidden bg-surface">
         {/* TopBar — hidden on vault page */}
         {view !== "vault" && <TopBar />}
 
@@ -60,9 +61,9 @@ export function AppLayout() {
 
 function DashboardView() {
   const { activeProject } = useProjectStore();
-  const { scanProject, scan, reset } = useCommandStore();
+  const { scanProject, reset } = useCommandStore();
   const { loadEnvironment } = useEnvironmentStore();
-  const [showEnvView, setShowEnvView] = useState(false);
+  const [showEnvView, setShowEnvView] = useState(true);
 
   // Watch for file changes
   useFileWatcher(activeProject?.id, activeProject?.path);
@@ -78,58 +79,68 @@ function DashboardView() {
   }, [activeProject?.path, activeProject?.id]);
 
   return (
-    <div className="flex-1 overflow-auto p-5 flex flex-col gap-4 bg-surface">
-      {/* Tech stack pills */}
-      {scan?.techStack && scan.techStack.length > 0 && (
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {scan.techStack.map((tech) => (
-            <span
-              key={tech}
-              className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                tech === "varlock"
-                  ? "bg-accent-light text-accent"
-                  : tech.includes("Next") || tech.includes("React") || tech.includes("Vue")
-                    ? "bg-[#E6F1FB] text-[#0C447C]"
-                    : tech.includes("Python") || tech.includes("Django") || tech.includes("Flask") || tech.includes("FastAPI")
-                      ? "bg-[#E1F5EE] text-[#085041]"
-                      : tech === "Docker"
-                        ? "bg-[#E6F1FB] text-[#185FA5]"
-                        : tech === "Rust"
-                          ? "bg-[#FAECE7] text-[#993C1D]"
-                          : "bg-surface-tertiary text-text-secondary"
-              }`}
+    <div className="flex-1 overflow-auto p-5 flex flex-col gap-4 bg-surface relative group/header">
+      {/* Project Header & View Tabs */}
+      <div className="flex flex-col gap-4 mb-2">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-[18px] font-semibold text-text tracking-tight flex items-center gap-2">
+              {activeProject?.name}
+            </h1>
+            <p className="text-[12px] text-text-muted mt-1 font-mono">{activeProject?.path}</p>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => activeProject && commands.openInExplorer(activeProject.path)}
+              className="px-2.5 h-7 text-[11px] font-medium rounded-md transition-colors cursor-pointer border flex items-center gap-1.5 bg-surface text-text-secondary border-border hover:bg-surface-secondary hover:text-text"
+              title="Open OS File Explorer"
             >
-              {tech}
-            </span>
-          ))}
+              <FolderOpen size={12} />
+              Explorer
+            </button>
+            <button
+              onClick={() => activeProject && commands.openInEditor(activeProject.path, "code")}
+              className="px-2.5 h-7 text-[11px] font-medium rounded-md transition-colors cursor-pointer border flex items-center gap-1.5 bg-surface text-text-secondary border-border hover:bg-surface-secondary hover:text-text"
+              title="Open in VS Code"
+            >
+              <Code size={12} />
+              VS Code
+            </button>
+            <button
+              onClick={() => activeProject && commands.openInEditor(activeProject.path, "cursor")}
+              className="px-2.5 h-7 text-[11px] font-medium rounded-md transition-colors cursor-pointer border flex items-center gap-1.5 bg-surface text-text-secondary border-border hover:bg-surface-secondary hover:text-text"
+              title="Open in Cursor"
+            >
+              <TextCursorInput size={12} />
+              Cursor
+            </button>
+          </div>
         </div>
-      )}
 
-      {/* Env selector bar */}
-      <EnvSelectorBar />
-
-      {/* View toggle */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => setShowEnvView(false)}
-          className={`text-[11px] font-medium px-3 py-1 rounded-md cursor-pointer border-none transition-colors ${
-            !showEnvView
-              ? "bg-accent text-white"
-              : "bg-transparent text-text-secondary hover:bg-surface-secondary"
-          }`}
-        >
-          Commands
-        </button>
-        <button
-          onClick={() => setShowEnvView(true)}
-          className={`text-[11px] font-medium px-3 py-1 rounded-md cursor-pointer border-none transition-colors ${
-            showEnvView
-              ? "bg-accent text-white"
-              : "bg-transparent text-text-secondary hover:bg-surface-secondary"
-          }`}
-        >
-          Variables
-        </button>
+        <div className="flex items-center gap-1 p-1 bg-surface-secondary border border-border-light rounded-lg shadow-sm self-start">
+          <button
+            onClick={() => setShowEnvView(true)}
+            className={`text-[11px] font-medium px-4 py-1.5 rounded-md cursor-pointer border-none transition-all ${
+              showEnvView
+                ? "bg-text text-surface shadow"
+                : "bg-transparent text-text-secondary hover:text-text hover:bg-surface-tertiary"
+            }`}
+          >
+            Variables
+          </button>
+          <button
+            onClick={() => setShowEnvView(false)}
+            className={`text-[11px] font-medium px-4 py-1.5 rounded-md cursor-pointer border-none transition-all ${
+              !showEnvView
+                ? "bg-text text-surface shadow"
+                : "bg-transparent text-text-secondary hover:text-text hover:bg-surface-tertiary"
+            }`}
+          >
+            Commands
+          </button>
+        </div>
       </div>
 
       {/* Content */}

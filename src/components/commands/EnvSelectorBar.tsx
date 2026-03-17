@@ -30,7 +30,7 @@ export function EnvSelectorBar() {
         : "bg-text-muted";
 
   return (
-    <div className="flex items-center gap-2.5 px-3 py-2 bg-surface-secondary border border-border-light rounded-xl">
+    <div className="flex items-center gap-2.5">
       {/* Label */}
       <span className="text-[11px] text-text-muted shrink-0">Active env</span>
 

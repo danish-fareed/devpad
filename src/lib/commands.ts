@@ -186,6 +186,14 @@ export async function openTerminalAt(cwd: string): Promise<void> {
   return invoke<void>("open_terminal_at", { cwd });
 }
 
+export async function openInEditor(cwd: string, editor: string): Promise<void> {
+  return invoke<void>("open_in_editor", { cwd, editor });
+}
+
+export async function openInExplorer(cwd: string): Promise<void> {
+  return invoke<void>("open_in_explorer", { cwd });
+}
+
 export async function attachToProcess(
   pid: number,
   cwd: string,

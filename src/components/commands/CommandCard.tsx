@@ -1,27 +1,12 @@
 import { useState, useEffect } from "react";
+import { Play } from "lucide-react";
 import type { DiscoveredCommand } from "@/lib/types";
 import { useCommandStore } from "@/stores/commandStore";
 import { useProjectStore } from "@/stores/projectStore";
 import { useEnvironmentStore } from "@/stores/environmentStore";
 import * as commands from "@/lib/commands";
 
-// ── Category visuals ──
-
-const CATEGORY_ICONS: Record<string, { icon: string; color: string }> = {
-  "dev-server":   { icon: "▶", color: "text-accent" },
-  build:          { icon: "⚡", color: "text-warning" },
-  test:           { icon: "✓", color: "text-success" },
-  database:       { icon: "⊙", color: "text-danger" },
-  "code-quality": { icon: "◆", color: "text-[#6B3FA0]" },
-  deploy:         { icon: "↑", color: "text-warning-dark" },
-  docker:         { icon: "⊞", color: "text-[#185FA5]" },
-  custom:         { icon: "★", color: "text-text-muted" },
-  other:          { icon: "●", color: "text-text-muted" },
-};
-
-function getIcon(category: string) {
-  return CATEGORY_ICONS[category] || CATEGORY_ICONS.other!;
-}
+// ── Utilities ──
 
 function formatUptime(startedAt: number): string {
   const diff = Math.floor((Date.now() - startedAt) / 1000);
@@ -48,7 +33,6 @@ export function CommandCard({ command }: CommandCardProps) {
 
   const isRunning = running?.status === "running";
 
-  const icon = getIcon(command.category);
   const cwd = activeProject?.path || "";
   const currentEnv = envName || "development";
 
@@ -94,19 +78,17 @@ export function CommandCard({ command }: CommandCardProps) {
         className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-all ${
           isRunning
             ? "border-success/40 bg-success-light/20"
-            : "border-border-light bg-surface hover:bg-surface-secondary/50"
+            : "border-border-light bg-surface-secondary hover:bg-surface-secondary/50"
         }`}
       >
-        {/* Category icon */}
-        <span className={`text-[12px] shrink-0 ${icon.color}`}>{icon.icon}</span>
 
         {/* Name + command */}
-        <div className="flex-1 min-w-0">
-          <div className="text-[12px] font-medium text-text truncate leading-tight">
-            {command.name}
-          </div>
-          <div className="text-[10px] font-mono text-text-muted truncate leading-tight">
+        <div className="flex-1 min-w-0 flex flex-col md:flex-row md:items-baseline gap-1 md:gap-3">
+          <div className="text-[14px] font-mono font-bold text-text truncate">
             {command.rawCmd}
+          </div>
+          <div className="text-[12px] text-text-muted truncate">
+            {command.name}
           </div>
         </div>
 
@@ -114,7 +96,7 @@ export function CommandCard({ command }: CommandCardProps) {
         {isRunning && (
           <div className="flex items-center gap-1.5 shrink-0">
             <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse-soft" />
-            <span className="text-[9px] font-mono text-success-dark">{uptime}</span>
+            <span className="text-[11px] font-mono text-success-dark">{uptime}</span>
           </div>
         )}
 
@@ -122,7 +104,7 @@ export function CommandCard({ command }: CommandCardProps) {
         {errors && errors.length > 0 && (
           <button
             onClick={() => clearError(command.id)}
-            className="text-[9px] px-1.5 py-0.5 rounded-full bg-danger-light text-danger-dark font-medium shrink-0 cursor-pointer border-none"
+            className="text-[11px] px-2 py-0.5 rounded-full bg-danger-light text-danger-dark font-medium shrink-0 cursor-pointer border-none"
             title={errors.join(", ")}
           >
             ⚠ {errors[0]?.substring(0, 30)}
@@ -146,7 +128,7 @@ export function CommandCard({ command }: CommandCardProps) {
         {isRunning ? (
           <button
             onClick={handleDismiss}
-            className="h-6 px-2.5 rounded-md bg-success-light text-success-dark text-[10px] font-medium border border-success/30 hover:bg-surface-secondary cursor-pointer flex items-center gap-1 shrink-0"
+            className="h-7 px-2.5 rounded-md bg-success-light text-success-dark text-[11px] font-medium border border-success/30 hover:bg-surface-secondary cursor-pointer flex items-center gap-1 shrink-0"
             title="Dismiss — terminal still runs in OS"
           >
             ✓ Launched
@@ -154,9 +136,9 @@ export function CommandCard({ command }: CommandCardProps) {
         ) : (
           <button
             onClick={handlePlay}
-            className="h-6 px-2.5 rounded-md bg-accent text-white text-[10px] font-medium hover:bg-accent-hover cursor-pointer border-none flex items-center gap-1 shrink-0"
+            className="h-7 px-3 rounded-md bg-accent text-white text-[11px] font-semibold hover:bg-accent-hover cursor-pointer border-none flex items-center gap-1.5 shrink-0"
           >
-            ▶ Play
+            <Play size={10} fill="currentColor" className="opacity-90" /> Play
           </button>
         )}
       </div>

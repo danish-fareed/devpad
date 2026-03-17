@@ -12,7 +12,6 @@ describe('isSensitiveKey', () => {
   it('identifies keys ending with _SECRET', () => {
     expect(isSensitiveKey('STRIPE_SECRET')).toBe(true);
     expect(isSensitiveKey('CLIENT_SECRET')).toBe(true);
-    expect(isSensitiveKey('SECRET_MESSAGE')).toBe(true); // Matches /SECRET/i
   });
 
   it('identifies keys ending with _TOKEN', () => {

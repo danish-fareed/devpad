@@ -7,6 +7,7 @@ import { useProjectStore } from "@/stores/projectStore";
 import { VariableRow } from "./VariableRow";
 import { VariableFilters } from "./VariableFilters";
 import { buildEditableVariable } from "@/lib/buildEditableVariable";
+import { useScanStore } from "@/stores/scanStore";
 
 /**
  * Variable table — macOS-style list with filters, column headers, and detail inspector.
@@ -25,6 +26,7 @@ export function VariableList() {
   const [editorError, setEditorError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const { runScan, state: scanState } = useScanStore();
 
   const selectedVariable = useMemo(
     () => loadResult?.variables.find((v) => v.key === selectedVariableKey) ?? null,
@@ -147,15 +149,42 @@ export function VariableList() {
   if (activeProject?.status === "migrationNeeded") return null;
   if (!loadResult && !isLoading) return null;
 
+  const handleScan = () => {
+    if (activeProject?.path && scanState !== "scanning") {
+      runScan(activeProject.path);
+    }
+  };
+
   return (
     <>
       <div>
-        {/* Header with filters */}
+        {/* Header with filters and scan button */}
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
             Variables — {activeEnv}
           </h3>
-          <VariableFilters />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleScan}
+              disabled={scanState === "scanning"}
+              className="h-7 px-2.5 text-[11px] font-medium rounded-md transition-colors cursor-pointer border bg-surface text-text-secondary border-border-light hover:bg-surface-secondary hover:text-text disabled:opacity-50 flex items-center justify-center gap-1.5"
+            >
+              {scanState === "scanning" ? (
+                <>
+                  <span className="w-2.5 h-2.5 border-[1.5px] border-current border-t-transparent rounded-full animate-spin" />
+                  Scanning...
+                </>
+              ) : (
+                <>
+                  <svg width="11" height="11" viewBox="0 0 13 13" fill="none" className="shrink-0" aria-hidden="true">
+                    <path d="M6.5 1v2m0 7v2m-4-5.5h2m7 0h2M3.26 3.26l1.06 1.06m5.36 5.36l1.06 1.06m0-7.48l-1.06 1.06M4.32 9.68l-1.06 1.06" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                  </svg>
+                  Scan
+                </>
+              )}
+            </button>
+            <VariableFilters />
+          </div>
         </div>
 
         {/* Loading state */}
