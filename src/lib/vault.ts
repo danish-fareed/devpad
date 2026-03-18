@@ -1,7 +1,7 @@
 // ── Vault Tauri Command Wrappers ──
 
 import { invoke } from "@tauri-apps/api/core";
-import type { VaultVariable, VaultStatusResult } from "./types";
+import type { VaultVariable, VaultStatusResult, VaultVariableWithProject } from "./types";
 
 /** Get the current vault status. */
 export async function vaultStatus(): Promise<VaultStatusResult> {
@@ -60,6 +60,45 @@ export async function vaultGetVariables(
     projectId,
     envName,
   });
+}
+
+/** Get all decrypted variables across all projects. */
+export async function vaultGetAllVariables(): Promise<VaultVariableWithProject[]> {
+  return invoke<VaultVariableWithProject[]>("vault_get_all_variables");
+}
+
+// ── Sharing ──
+
+export async function vaultShareVariable(
+  sourceProjectId: string,
+  envName: string,
+  key: string,
+  targetProjectIds: string[]
+): Promise<void> {
+  return invoke("vault_share_variable", { sourceProjectId, envName, key, targetProjectIds });
+}
+
+export async function vaultUnshareVariable(
+  sourceProjectId: string,
+  envName: string,
+  key: string,
+  targetProjectId: string
+): Promise<boolean> {
+  return invoke<boolean>("vault_unshare_variable", { sourceProjectId, envName, key, targetProjectId });
+}
+
+export async function vaultGetSharedTargets(
+  sourceProjectId: string,
+  envName: string,
+  key: string
+): Promise<string[]> {
+  return invoke<string[]>("vault_get_shared_targets", { sourceProjectId, envName, key });
+}
+
+export async function vaultGetVariablesSharedWith(
+  targetProjectId: string
+): Promise<VaultVariableWithProject[]> {
+  return invoke<VaultVariableWithProject[]>("vault_get_variables_shared_with", { targetProjectId });
 }
 
 /** Set a variable in the vault. */

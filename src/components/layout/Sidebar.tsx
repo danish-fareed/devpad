@@ -7,6 +7,7 @@ import { useState } from "react";
 import type { AppView } from "@/lib/types";
 import * as commands from "@/lib/commands";
 import { LayoutDashboard, ShieldCheck, ChevronRight, Plus, ChevronLeft, Terminal, Activity } from "lucide-react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 /**
  * Sidebar with clear section hierarchy: Logo → Nav → Projects → Running.
@@ -20,6 +21,21 @@ export function Sidebar() {
   const [isProjectsCollapsed, setIsProjectsCollapsed] = useState(false);
 
   const runningCount = Object.values(running).filter((r) => r.status === "running").length;
+
+  let appWindow: ReturnType<typeof getCurrentWindow> | null = null;
+  try {
+    appWindow = getCurrentWindow();
+  } catch (e) {
+    // Not in Tauri environment
+  }
+
+  const handleDrag = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('button, a, input, select, [data-no-drag]')) return;
+    e.preventDefault();
+    appWindow?.startDragging();
+  };
 
   const navItems: { id: AppView; label: string; icon: React.ReactNode }[] = [
     {
@@ -39,7 +55,7 @@ export function Sidebar() {
     return (
       <div className="w-12 bg-surface-secondary flex flex-col items-center shrink-0 border-r border-border-light">
         {/* Drag region + collapse toggle */}
-        <div data-tauri-drag-region className="no-select w-full pt-4 pb-2 flex justify-center">
+        <div onMouseDown={handleDrag} className="no-select w-full pt-4 pb-2 flex justify-center">
           <button
             onClick={toggleSidebar}
             className="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text hover:bg-surface-tertiary transition-colors cursor-pointer bg-transparent border-none"
@@ -106,7 +122,7 @@ export function Sidebar() {
   return (
     <div className="w-60 bg-surface-secondary flex flex-col shrink-0 border-r border-border-light">
       {/* Drag region / brand header */}
-      <div data-tauri-drag-region className="no-select px-4 pt-4 pb-2">
+      <div onMouseDown={handleDrag} className="no-select px-4 pt-4 pb-2">
         <div className="flex items-center gap-2.5">
           <div className="h-5 flex items-center justify-center">
             <img src="/logo.svg" alt="Devpad Logo" className="h-full w-auto object-contain text-text" />

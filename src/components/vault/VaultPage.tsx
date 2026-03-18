@@ -5,8 +5,9 @@ import { SetupWizard } from "./SetupWizard";
 import { SecretGenerator } from "./SecretGenerator";
 import { AiContextPanel } from "./AiContextPanel";
 import { TeamSyncPanel } from "./TeamSyncPanel";
-import { Shield, Lock, Unlock, Activity, Plus, Folder, EyeOff, Eye, Copy } from "lucide-react";
-import type { VaultVariable } from "@/lib/types";
+import { Shield, Lock, Unlock, Activity, Plus, Folder, EyeOff, Eye, Copy, Share2, X, Check } from "lucide-react";
+import type { VaultVariable, Project } from "@/lib/types";
+import { vaultGetSharedTargets } from "@/lib/vault";
 
 export function VaultPage() {
   const { status, lock, globalVariables, loadAllGlobalVariables, loading } = useVaultStore();
@@ -185,7 +186,7 @@ function GlobalSecretsList({
             </div>
             <div className="divide-y divide-border-light">
               {vars.map(v => (
-                <SecretRow key={`${projectId}-${v.env}-${v.key}`} variable={v} />
+                <SecretRow key={`${projectId}-${v.env}-${v.key}`} variable={v} projectId={projectId} projects={projects} />
               ))}
             </div>
           </div>
@@ -195,8 +196,9 @@ function GlobalSecretsList({
   );
 }
 
-function SecretRow({ variable }: { variable: VaultVariable }) {
+function SecretRow({ variable, projectId, projects }: { variable: VaultVariable; projectId: string; projects: Project[] }) {
   const [revealed, setRevealed] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   return (
     <div className="px-5 py-3 flex items-center justify-between hover:bg-surface-secondary/50 transition-colors group">
@@ -228,6 +230,157 @@ function SecretRow({ variable }: { variable: VaultVariable }) {
         >
            <Copy size={14} />
         </button>
+        <button
+          onClick={() => setShowShareModal(true)}
+          className="p-1.5 rounded-md hover:bg-surface-tertiary text-text-muted hover:text-text transition-colors cursor-pointer"
+          title="Share variable"
+        >
+           <Share2 size={14} />
+        </button>
+      </div>
+
+      {showShareModal && (
+        <ShareVariableModal
+          variable={variable}
+          projectId={projectId}
+          projects={projects}
+          onClose={() => setShowShareModal(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ShareVariableModal({ 
+  variable, 
+  projectId, 
+  projects, 
+  onClose 
+}: { 
+  variable: VaultVariable; 
+  projectId: string; 
+  projects: Project[]; 
+  onClose: () => void;
+}) {
+  const { shareVariable, unshareVariable } = useVaultStore();
+  const [sharedTargets, setSharedTargets] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Projects that are NOT the source project
+  const availableProjects = projects.filter(p => p.id !== projectId);
+
+  useEffect(() => {
+    async function fetchTargets() {
+      try {
+        const targets = await vaultGetSharedTargets(projectId, variable.env, variable.key);
+        setSharedTargets(targets);
+      } catch (e) {
+        setError(String(e));
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchTargets();
+  }, [projectId, variable]);
+
+  const toggleShare = async (targetId: string) => {
+    try {
+      const isShared = sharedTargets.includes(targetId);
+      if (isShared) {
+        await unshareVariable(projectId, variable.env, variable.key, targetId);
+        setSharedTargets(prev => prev.filter(id => id !== targetId));
+      } else {
+        await shareVariable(projectId, variable.env, variable.key, [targetId]);
+        setSharedTargets(prev => [...prev, targetId]);
+      }
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-sm p-4">
+      <div className="bg-surface rounded-2xl shadow-xl border border-border-light w-full max-w-md overflow-hidden animate-fade-in">
+        <div className="px-5 py-4 border-b border-border-light flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-text">Share Variable</h3>
+            <p className="text-xs text-text-secondary mt-0.5 font-mono">{variable.key}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-secondary text-text-muted hover:text-text transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        
+        <div className="p-5 max-h-[60vh] overflow-y-auto">
+          <p className="text-xs text-text-secondary mb-4 leading-relaxed">
+            Select the projects that should have access to this vault variable. It will appear as if it was defined in their environments.
+          </p>
+
+          {error && (
+            <div className="mb-4 p-3 bg-danger-light border border-danger/20 rounded-xl text-xs text-danger-dark">
+              {error}
+            </div>
+          )}
+
+          {loading ? (
+            <div className="py-8 flex justify-center">
+              <div className="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+            </div>
+          ) : availableProjects.length === 0 ? (
+            <div className="text-center py-6 text-sm text-text-muted bg-surface-secondary rounded-xl">
+              No other projects available to share with.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {availableProjects.map(p => {
+                const isShared = sharedTargets.includes(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => toggleShare(p.id)}
+                    className={`w-full text-left px-4 py-3 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${
+                      isShared 
+                        ? "bg-accent-light/50 border-accent/30 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]" 
+                        : "bg-surface-secondary/50 border-border-light hover:bg-surface-secondary"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isShared ? 'bg-accent text-white' : 'bg-surface border border-border-light text-text-muted'}`}>
+                        <Folder size={14} />
+                      </div>
+                      <div>
+                        <div className={`text-[13px] font-medium ${isShared ? 'text-accent-dark' : 'text-text'}`}>
+                          {p.name}
+                        </div>
+                        <div className="text-[10px] text-text-muted mt-0.5 truncate max-w-[200px]">
+                          {p.path.split(/[\\/]/).slice(-2).join("/")}
+                        </div>
+                      </div>
+                    </div>
+                    {isShared && (
+                      <div className="w-5 h-5 rounded-full bg-accent text-white flex items-center justify-center shadow-sm">
+                        <Check size={12} strokeWidth={3} />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        
+        <div className="p-4 border-t border-border-light bg-surface-secondary/50">
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 bg-surface border border-border-light rounded-xl text-sm font-medium text-text hover:bg-surface-secondary transition-colors cursor-pointer shadow-sm"
+          >
+            Done
+          </button>
+        </div>
       </div>
     </div>
   );

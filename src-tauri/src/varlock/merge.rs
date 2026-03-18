@@ -75,6 +75,7 @@ pub fn merge_load_with_schema(
             },
             warnings,
             has_schema: true,
+            is_vault_ref: false,
             schema_base_value: Some(entry.base_value.clone()),
             schema_line_start: Some(entry.line_start),
             schema_line_end: Some(entry.line_end),
@@ -117,9 +118,21 @@ fn build_merged_variable(
         None => (var.required, "inferred".to_string()),
     };
 
-    let (sensitive, sensitive_source) = match schema_entry {
-        Some(entry) => (entry.sensitive, "schema".to_string()),
-        None => (var.sensitive, "inferred".to_string()),
+    // Detect vault references: if the value starts with "varlock://vault/",
+    // auto-classify as sensitive regardless of schema/CLI metadata.
+    let is_vault_ref = var
+        .value
+        .as_deref()
+        .map(|v| v.starts_with("varlock://vault/"))
+        .unwrap_or(false);
+
+    let (sensitive, sensitive_source) = if is_vault_ref {
+        (true, "vault".to_string())
+    } else {
+        match schema_entry {
+            Some(entry) => (entry.sensitive, "schema".to_string()),
+            None => (var.sensitive, "inferred".to_string()),
+        }
     };
 
     let description = schema_entry
@@ -151,6 +164,7 @@ fn build_merged_variable(
         errors: var.errors.clone(),
         warnings,
         has_schema: schema_entry.is_some(),
+        is_vault_ref,
         schema_base_value: schema_entry.map(|e| e.base_value.clone()),
         schema_line_start: schema_entry.map(|e| e.line_start),
         schema_line_end: schema_entry.map(|e| e.line_end),

@@ -144,6 +144,10 @@ export interface VaultVariable {
 
 export type SecretType = "hex" | "base64" | "uuid" | "alphanumeric" | "password";
 
+export interface VaultVariableWithProject extends VaultVariable {
+  projectId: string;
+}
+
 
 // ── Schema editing types ──
 
@@ -242,6 +246,8 @@ export interface MergedVariable {
   warnings: string[];
   /** Whether a schema entry exists for this variable */
   hasSchema: boolean;
+  /** Whether the value is a varlock://vault/ reference */
+  isVaultRef: boolean;
   /** The base value from the schema (if present) */
   schemaBaseValue: string | null;
   /** Line range in schema file (if present) */

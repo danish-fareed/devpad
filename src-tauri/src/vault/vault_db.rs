@@ -81,8 +81,11 @@ impl VaultDb {
             }
         }
 
-        // Enable WAL mode for better concurrency
-        conn.execute_batch("PRAGMA journal_mode=WAL;")?;
+        // Enable WAL mode for better concurrency and foreign keys for cascades
+        conn.execute_batch("
+            PRAGMA journal_mode=WAL;
+            PRAGMA foreign_keys=ON;
+        ")?;
 
         let db = Self {
             conn: Mutex::new(conn),
@@ -304,6 +307,59 @@ impl VaultDb {
         Ok(variables)
     }
 
+    /// Get all decrypted variables across ALL projects and environments.
+    /// Returns `(project_id, VaultVariable)` tuples.
+    pub fn get_all_variables(
+        &self,
+        dek: &SecureKey,
+    ) -> Result<Vec<(String, VaultVariable)>, VaultDbError> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT project_id, env, encrypted_key, encrypted_value, var_type, sensitive, required, description 
+             FROM variables
+             ORDER BY project_id, env, rowid",
+        )?;
+
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, Vec<u8>>(2)?,
+                row.get::<_, Vec<u8>>(3)?,
+                row.get::<_, String>(4)?,
+                row.get::<_, bool>(5)?,
+                row.get::<_, bool>(6)?,
+                row.get::<_, String>(7)?,
+            ))
+        })?;
+
+        let mut results = Vec::new();
+        for row_result in rows {
+            let (project_id, env, encrypted_key, encrypted_value, var_type, sensitive, required, description) =
+                row_result?;
+
+            let key = String::from_utf8(crypto::decrypt(&encrypted_key, dek)?)
+                .map_err(|e| CryptoError::Decryption(format!("Key UTF-8 error: {}", e)))?;
+            let value = String::from_utf8(crypto::decrypt(&encrypted_value, dek)?)
+                .map_err(|e| CryptoError::Decryption(format!("Value UTF-8 error: {}", e)))?;
+
+            results.push((
+                project_id.clone(),
+                VaultVariable {
+                    key,
+                    value,
+                    env,
+                    var_type,
+                    sensitive,
+                    required,
+                    description,
+                },
+            ));
+        }
+
+        Ok(results)
+    }
+
     /// Delete a variable from the vault.
     pub fn delete_variable(
         &self,
@@ -332,6 +388,133 @@ impl VaultDb {
             params![project_id, env],
         )?;
         Ok(affected)
+    }
+
+    // ── Sharing ──
+
+    /// Share a variable with one or more target projects.
+    pub fn share_variable(
+        &self,
+        source_project_id: &str,
+        env: &str,
+        key: &str,
+        target_project_ids: &[String],
+    ) -> Result<(), VaultDbError> {
+        let mut conn = self.conn.lock().unwrap();
+        let tx = conn.transaction()?;
+        let key_hash = Self::key_hash(key);
+
+        for target in target_project_ids {
+            tx.execute(
+                "INSERT OR IGNORE INTO vault_sharing 
+                 (source_project_id, source_env, key_hash, target_project_id)
+                 VALUES (?1, ?2, ?3, ?4)",
+                params![source_project_id, env, key_hash, target],
+            )?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// Stop sharing a variable with a specific target project.
+    pub fn unshare_variable(
+        &self,
+        source_project_id: &str,
+        env: &str,
+        key: &str,
+        target_project_id: &str,
+    ) -> Result<bool, VaultDbError> {
+        let conn = self.conn.lock().unwrap();
+        let affected = conn.execute(
+            "DELETE FROM vault_sharing 
+             WHERE source_project_id = ?1 AND source_env = ?2 AND key_hash = ?3 AND target_project_id = ?4",
+            params![source_project_id, env, Self::key_hash(key), target_project_id],
+        )?;
+        Ok(affected > 0)
+    }
+
+    /// Get all projects a specific variable is shared with.
+    pub fn get_shared_targets(
+        &self,
+        source_project_id: &str,
+        env: &str,
+        key: &str,
+    ) -> Result<Vec<String>, VaultDbError> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT target_project_id FROM vault_sharing 
+             WHERE source_project_id = ?1 AND source_env = ?2 AND key_hash = ?3
+             ORDER BY target_project_id"
+        )?;
+
+        let rows = stmt.query_map(params![source_project_id, env, Self::key_hash(key)], |row| {
+            row.get::<_, String>(0)
+        })?;
+
+        let mut targets = Vec::new();
+        for t in rows {
+            targets.push(t?);
+        }
+        Ok(targets)
+    }
+
+    /// Get all variables shared WITH a target project from other projects.
+    pub fn get_variables_shared_with(
+        &self,
+        target_project_id: &str,
+        dek: &SecureKey,
+    ) -> Result<Vec<(String, VaultVariable)>, VaultDbError> {
+        let conn = self.conn.lock().unwrap();
+        // Join sharing table with variables table
+        let mut stmt = conn.prepare(
+            "SELECT v.project_id, v.env, v.encrypted_key, v.encrypted_value, v.var_type, v.sensitive, v.required, v.description 
+             FROM variables v
+             INNER JOIN vault_sharing s ON 
+                v.project_id = s.source_project_id AND 
+                v.env = s.source_env AND 
+                v.key_hash = s.key_hash
+             WHERE s.target_project_id = ?1
+             ORDER BY v.project_id, v.env, v.rowid",
+        )?;
+
+        let rows = stmt.query_map(params![target_project_id], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, Vec<u8>>(2)?,
+                row.get::<_, Vec<u8>>(3)?,
+                row.get::<_, String>(4)?,
+                row.get::<_, bool>(5)?,
+                row.get::<_, bool>(6)?,
+                row.get::<_, String>(7)?,
+            ))
+        })?;
+
+        let mut results = Vec::new();
+        for row_result in rows {
+            let (project_id, env, encrypted_key, encrypted_value, var_type, sensitive, required, description) =
+                row_result?;
+
+            let key = String::from_utf8(crypto::decrypt(&encrypted_key, dek)?)
+                .map_err(|e| CryptoError::Decryption(format!("Key UTF-8 error: {}", e)))?;
+            let value = String::from_utf8(crypto::decrypt(&encrypted_value, dek)?)
+                .map_err(|e| CryptoError::Decryption(format!("Value UTF-8 error: {}", e)))?;
+
+            results.push((
+                project_id.clone(),
+                VaultVariable {
+                    key,
+                    value,
+                    env,
+                    var_type,
+                    sensitive,
+                    required,
+                    description,
+                },
+            ));
+        }
+
+        Ok(results)
     }
 
     // ── Import ──
@@ -491,11 +674,24 @@ impl VaultDb {
                 metadata TEXT
             );
 
+            CREATE TABLE IF NOT EXISTS vault_sharing (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                source_project_id TEXT NOT NULL,
+                source_env TEXT NOT NULL,
+                key_hash TEXT NOT NULL,
+                target_project_id TEXT NOT NULL,
+                UNIQUE(source_project_id, source_env, key_hash, target_project_id),
+                FOREIGN KEY (source_project_id, source_env, key_hash) REFERENCES variables(project_id, env, key_hash) ON DELETE CASCADE
+            );
+
             CREATE INDEX IF NOT EXISTS idx_variables_project_env
                 ON variables (project_id, env);
             
             CREATE INDEX IF NOT EXISTS idx_access_log_project
                 ON access_log (project_id, timestamp);
+                
+            CREATE INDEX IF NOT EXISTS idx_vault_sharing_target 
+                ON vault_sharing (target_project_id);
             ",
         )?;
         Ok(())

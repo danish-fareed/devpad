@@ -5,6 +5,8 @@ import { useVaultStore } from "@/stores/vaultStore";
 import { useProjectStore } from "@/stores/projectStore";
 import { useEnvironmentStore } from "@/stores/environmentStore";
 import { readEnvFile, writeEnvFile } from "@/lib/commands";
+import { updateSchemaEntry, serializeSchemaEntry, parseSchema } from "@/lib/schemaParser";
+import type { SchemaEntry, SchemaVarType } from "@/lib/types";
 import { isSensitiveKey } from "@/lib/utils";
 import { Shield, MoreVertical, Copy, ShieldOff, Trash, Eye, EyeOff, ShieldAlert } from "lucide-react";
 
@@ -84,7 +86,9 @@ export function VariableRow({ variable, isSelected, onSelect, onDelete, isLast }
         variable.key,
         variable.value,
         variable.type,
-        true
+        true,
+        variable.required,
+        variable.description
       );
 
       const envPath = `${activeProject.path}/.env`;
@@ -110,7 +114,57 @@ export function VariableRow({ variable, isSelected, onSelect, onDelete, isLast }
       });
 
       await writeEnvFile(envPath, newLines.join("\n"));
+
+      // Also mark it sensitive in .env.schema
+      const schemaPath = `${activeProject.path}/.env.schema`;
+      let schemaContent = "";
+      try {
+        schemaContent = await readEnvFile(schemaPath);
+      } catch (e) {
+        // file might not exist
+      }
+
+      const updatedEntry: SchemaEntry = {
+        key: variable.key,
+        baseValue: variable.schemaBaseValue ?? variable.value ?? "",
+        type: (variable.type as SchemaVarType) ?? "string",
+        required: variable.required ?? true,
+        sensitive: true, // Force to sensitive
+        description: variable.description ?? "",
+        enumValues: variable.enumValues ?? [],
+        decorators: [], // We don't have access to existing decorators easily here, but parsing it from schemaContent works
+        lineStart: variable.schemaLineStart ?? 0,
+        lineEnd: variable.schemaLineEnd ?? 0,
+      };
+
+      // Try to preserve existing decorators if entry exists
+      if (schemaContent) {
+        const existingEntries = parseSchema(schemaContent);
+        const existing = existingEntries.find((e) => e.key === variable.key);
+        if (existing) {
+          updatedEntry.decorators = existing.decorators;
+        }
+      }
+
+      let nextSchemaContent: string;
+      if (schemaContent && variable.hasSchema) {
+        nextSchemaContent = updateSchemaEntry(schemaContent, updatedEntry);
+      } else if (schemaContent) {
+        const block = serializeSchemaEntry(updatedEntry);
+        const lineEnding = schemaContent.includes("\r\n") ? "\r\n" : "\n";
+        const hasTrailing = schemaContent.endsWith("\n");
+        nextSchemaContent = schemaContent + (hasTrailing ? lineEnding : lineEnding + lineEnding) + block + lineEnding;
+      } else {
+        nextSchemaContent = serializeSchemaEntry(updatedEntry) + "\n";
+      }
+
+      await writeEnvFile(schemaPath, nextSchemaContent);
+
       useEnvironmentStore.getState().loadEnvironment(activeProject.path);
+
+      // Refresh vault global variables so the Vault tab updates immediately
+      const { projects } = useProjectStore.getState();
+      useVaultStore.getState().loadAllGlobalVariables(projects);
     } catch (e) {
       console.error("Failed to store variable in vault:", e);
     }

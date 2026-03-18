@@ -293,20 +293,31 @@ pub async fn scan(cwd: &str) -> Result<VarlockScanResult, String> {
         .ok_or_else(|| "Varlock is not installed.".to_string())?;
 
     let mut cmd = Command::new(&binary);
-    cmd.args(["scan", "--format=json"]);
-    cmd.arg("--cwd");
+    cmd.args(["scan", "--format=json", "--path"]);
     cmd.arg(cwd);
     configure_no_window(&mut cmd);
 
     let output = output_with_timeout(&mut cmd, CLI_TIMEOUT, "varlock scan").await?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
-    serde_json::from_str::<VarlockScanResult>(&stdout).map_err(|e| {
+    let trimmed_stdout = stdout.trim();
+    let combined_output = if stderr.trim().is_empty() {
+        trimmed_stdout.to_string()
+    } else if trimmed_stdout.is_empty() {
+        stderr.trim().to_string()
+    } else {
+        format!("{}\n{}", stderr.trim(), trimmed_stdout)
+    };
+
+    let json_str = extract_json(trimmed_stdout).unwrap_or(trimmed_stdout);
+
+    serde_json::from_str::<VarlockScanResult>(json_str).map_err(|e| {
         format!(
             "Failed to parse varlock scan output: {}. Raw output: {}",
             e,
-            truncate_output(&stdout, 500)
+            truncate_output(&combined_output, 500)
         )
     })
 }

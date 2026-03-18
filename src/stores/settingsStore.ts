@@ -13,6 +13,10 @@ export interface AppSettings {
   terminalFontSize: number;
   /** Terminal scrollback lines */
   terminalScrollback: number;
+  /** Whether the vault should automatically lock after inactivity */
+  autoLockEnabled: boolean;
+  /** Inactivity timeout in minutes before auto-locking */
+  autoLockTimeout: number;
 }
 
 // ── Persistence ──
@@ -46,6 +50,8 @@ function getDefaultSettings(): AppSettings {
     sidebarCollapsed: false,
     terminalFontSize: 13,
     terminalScrollback: 10000,
+    autoLockEnabled: false,
+    autoLockTimeout: 15,
   };
 }
 
@@ -83,6 +89,8 @@ interface SettingsState extends AppSettings {
   setTerminalOpen: (open: boolean) => void;
   /** Re-resolve theme (call when system preference changes) */
   syncSystemTheme: () => void;
+  setAutoLockEnabled: (enabled: boolean) => void;
+  setAutoLockTimeout: (minutes: number) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set, get) => {
@@ -142,6 +150,18 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
     setTerminalOpen: (open) => {
       set({ terminalOpen: open });
     },
+
+    setAutoLockEnabled: (enabled) => {
+      set({ autoLockEnabled: enabled });
+      const settings = extractSettings(get());
+      persistSettings(settings);
+    },
+
+    setAutoLockTimeout: (minutes) => {
+      set({ autoLockTimeout: minutes });
+      const settings = extractSettings(get());
+      persistSettings(settings);
+    },
   };
 });
 
@@ -153,6 +173,8 @@ function extractSettings(state: SettingsState): AppSettings {
     sidebarCollapsed: state.sidebarCollapsed,
     terminalFontSize: state.terminalFontSize,
     terminalScrollback: state.terminalScrollback,
+    autoLockEnabled: state.autoLockEnabled,
+    autoLockTimeout: state.autoLockTimeout,
   };
 }
 

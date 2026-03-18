@@ -67,6 +67,8 @@ pub struct MergedVariable {
     pub warnings: Vec<String>,
     /// Whether a schema entry exists for this variable.
     pub has_schema: bool,
+    /// Whether the value is a varlock://vault/ reference.
+    pub is_vault_ref: bool,
     /// The base value from the schema (if present).
     pub schema_base_value: Option<String>,
     /// Line range in schema file (if present).

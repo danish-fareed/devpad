@@ -4,6 +4,7 @@ import { useProjectStore } from "@/stores/projectStore";
 import { useVarlockCommand } from "@/hooks/useVarlockCommand";
 import { useVaultStore } from "@/stores/vaultStore";
 import { VaultUnlockScreen } from "@/components/vault/VaultUnlockScreen";
+import { useAutoLock } from "@/hooks/useAutoLock";
 import type { VarlockStatus } from "@/lib/types";
 import { Check, Terminal } from "lucide-react";
 
@@ -20,6 +21,9 @@ export default function App() {
   const vaultStatus = useVaultStore((s) => s.status);
   const checkVaultStatus = useVaultStore((s) => s.checkStatus);
   const tryAutoUnlock = useVaultStore((s) => s.tryAutoUnlock);
+
+  // Mount the global inactivity listener for auto-locking the vault
+  useAutoLock();
 
   useEffect(() => {
     const init = async () => {

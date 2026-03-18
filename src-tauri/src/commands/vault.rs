@@ -171,6 +171,31 @@ pub fn vault_get_variables(
         .map_err(|e| e.to_string())
 }
 
+/// A vault variable with its source project ID (for the global vault list).
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultVariableWithProject {
+    pub project_id: String,
+    #[serde(flatten)]
+    pub variable: VaultVariable,
+}
+
+/// Get ALL decrypted variables across all projects and environments.
+#[tauri::command]
+pub fn vault_get_all_variables(
+    vault: State<'_, VaultState>,
+) -> Result<Vec<VaultVariableWithProject>, String> {
+    let dek = vault.require_dek()?;
+    let all = vault.db.get_all_variables(&dek).map_err(|e| e.to_string())?;
+    Ok(all
+        .into_iter()
+        .map(|(project_id, variable)| VaultVariableWithProject {
+            project_id,
+            variable,
+        })
+        .collect())
+}
+
 /// Set a single variable in the vault.
 #[tauri::command]
 pub fn vault_set_variable(
@@ -222,6 +247,72 @@ pub fn vault_delete_variable(
             }
             deleted
         })
+}
+
+// ── Sharing ──
+
+#[tauri::command]
+pub fn vault_share_variable(
+    vault: State<'_, VaultState>,
+    source_project_id: String,
+    env_name: String,
+    key: String,
+    target_project_ids: Vec<String>,
+) -> Result<(), String> {
+    let _dek = vault.require_dek()?;
+    vault
+        .db
+        .share_variable(&source_project_id, &env_name, &key, &target_project_ids)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn vault_unshare_variable(
+    vault: State<'_, VaultState>,
+    source_project_id: String,
+    env_name: String,
+    key: String,
+    target_project_id: String,
+) -> Result<bool, String> {
+    let _dek = vault.require_dek()?;
+    vault
+        .db
+        .unshare_variable(&source_project_id, &env_name, &key, &target_project_id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn vault_get_shared_targets(
+    vault: State<'_, VaultState>,
+    source_project_id: String,
+    env_name: String,
+    key: String,
+) -> Result<Vec<String>, String> {
+    let _dek = vault.require_dek()?;
+    vault
+        .db
+        .get_shared_targets(&source_project_id, &env_name, &key)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn vault_get_variables_shared_with(
+    vault: State<'_, VaultState>,
+    target_project_id: String,
+) -> Result<Vec<VaultVariableWithProject>, String> {
+    let dek = vault.require_dek()?;
+    let shared = vault
+        .db
+        .get_variables_shared_with(&target_project_id, &dek)
+        .map_err(|e| e.to_string())?;
+
+    Ok(shared
+        .into_iter()
+        .map(|(project_id, variable)| VaultVariableWithProject {
+            project_id,
+            variable,
+        })
+        .collect())
 }
 
 /// Generate a cryptographic secret.

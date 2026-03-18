@@ -23,11 +23,12 @@ export function AppLayout() {
   const showScanResults = useScanStore((s) => s.showResults);
 
   return (
-    <div className="h-screen w-screen flex overflow-hidden bg-surface-secondary text-text">
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-surface-secondary text-text">
+      <div className="flex-1 flex overflow-hidden">
       <Sidebar />
 
       <div className="flex-1 flex flex-col overflow-hidden bg-surface">
-        {view !== "vault" && <TopBar />}
+        <TopBar />
 
         <div className="flex-1 overflow-auto flex flex-col relative bg-surface">
           {view === "vault" ? (
@@ -44,6 +45,7 @@ export function AppLayout() {
             <DashboardPage />
           )}
         </div>
+      </div>
       </div>
     </div>
   );

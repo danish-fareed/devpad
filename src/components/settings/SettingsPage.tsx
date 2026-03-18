@@ -21,6 +21,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     setTheme,
     setTerminalFontSize,
     setTerminalScrollback,
+    autoLockEnabled,
+    autoLockTimeout,
+    setAutoLockEnabled,
+    setAutoLockTimeout,
   } = useSettingsStore();
 
   const { status, unlock, lock, loading, error } = useVaultStore();
@@ -45,6 +49,18 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
       // Error handled by store
     }
   };
+
+  const handleAutoLockChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    if (val === "never") {
+      setAutoLockEnabled(false);
+    } else {
+      setAutoLockEnabled(true);
+      setAutoLockTimeout(Number(val));
+    }
+  };
+
+  const autoLockValue = autoLockEnabled ? String(autoLockTimeout) : "never";
 
   const modalContent = (
     <div
@@ -181,6 +197,24 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                        <p className="text-[11px] text-text-muted">Forget this device and reset auto-unlock.</p>
                      </div>
                      <button className="px-3 py-1.5 rounded-lg border border-danger/20 text-danger text-[12px] font-semibold hover:bg-danger/5">Reset</button>
+                   </div>
+                   
+                   <div className="flex items-center justify-between mt-4">
+                     <div>
+                       <p className="text-[13px] text-text font-medium">Auto-Lock</p>
+                       <p className="text-[11px] text-text-muted">Lock vault after inactivity.</p>
+                     </div>
+                     <select
+                       value={autoLockValue}
+                       onChange={handleAutoLockChange}
+                       className="h-8 px-2 rounded-lg border border-border-light bg-surface text-text text-[13px] outline-none"
+                     >
+                       <option value="never">Never</option>
+                       <option value="5">After 5 minutes</option>
+                       <option value="15">After 15 minutes</option>
+                       <option value="30">After 30 minutes</option>
+                       <option value="60">After 1 hour</option>
+                     </select>
                    </div>
                 </div>
               </div>
