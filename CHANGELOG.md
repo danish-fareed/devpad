@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-03-18
+
+### Added
+- GitHub clone onboarding in Project Intel to streamline first-time repository setup.
+- Runtime vault resolution path for production migration and command execution hardening.
+- Vault variable sharing flows and auto-lock behavior for stronger session safety.
+
+### Changed
+- Stabilized scoped command discovery and execution handling across projects.
+- Refined app layouts and refreshed UI components for better navigation and consistency.
+- Improved variable modal behavior and utility layer ergonomics in the frontend.
+
+### Commits Catalog (Mar 18, 2026)
+- `feat(project-intel): add GitHub clone onboarding and stabilize scoped commands`
+- `feat(varlock): ship production migration and runtime vault resolution`
+- `feat: Implement Vault auto-lock, variable sharing, and refine app layouts`
+- `feat: Refresh UI components, add variable modal, and improve utilities`
+
 ## [0.2.0] - 2026-03-18
 
 ### Added

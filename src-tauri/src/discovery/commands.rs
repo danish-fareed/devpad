@@ -1,4 +1,5 @@
 use crate::discovery::detector::{detect_topology, normalize_rel_path};
+use crate::discovery::python::{apply_python_substitution, detect_python_environment};
 use crate::discovery::types::{
     CloudJobConfig, CommandType, DiscoveredCommand, EnvScope, ProjectNode, ProjectNodeType,
     ProjectScan, ProjectTopology, RuntimeKind,
@@ -96,6 +97,28 @@ fn humanize_name(key: &str) -> String {
         })
         .collect::<Vec<_>>()
         .join(" ")
+}
+
+fn infer_uvicorn_target(node_path: &Path) -> String {
+    if node_path.join("app/main.py").exists() {
+        return "app.main:app".to_string();
+    }
+    if node_path.join("main.py").exists() {
+        return "main:app".to_string();
+    }
+    if node_path.join("app.py").exists() {
+        return "app:app".to_string();
+    }
+    if node_path.join("src/main.py").exists() {
+        return "src.main:app".to_string();
+    }
+    if node_path.join("src/app.py").exists() {
+        return "src.app:app".to_string();
+    }
+    if node_path.join("server.py").exists() {
+        return "server:app".to_string();
+    }
+    "app:app".to_string()
 }
 
 fn classify_raw_command(
@@ -268,19 +291,121 @@ fn discover_node_commands(node: &ProjectNode, scopes: &[EnvScope]) -> Vec<Discov
     }
 
     if node.runtimes.contains(&RuntimeKind::Python) {
-        let mut add = |name: &str, raw: &str, source_file: &str| {
-            let (kind, cloud_cfg) = classify_raw_command(name, raw, source_file);
-            let (command, args) = parse_command(raw);
-            let id = make_command_id(&node.project_id, &node.id, name, &command, &args);
+        let has_requirements = node_path.join("requirements.txt").exists();
+        let has_pyproject = node_path.join("pyproject.toml").exists();
+        let pyproject_content = if has_pyproject {
+            fs::read_to_string(node_path.join("pyproject.toml")).unwrap_or_default()
+        } else {
+            String::new()
+        };
+        let requirements_content = if has_requirements {
+            fs::read_to_string(node_path.join("requirements.txt")).unwrap_or_default()
+        } else {
+            String::new()
+        };
+        let mut python_entries: Vec<(String, String, String)> = Vec::new();
+
+        if node_path.join("manage.py").exists() {
+            python_entries.push((
+                "runserver".to_string(),
+                "python manage.py runserver".to_string(),
+                "manage.py".to_string(),
+            ));
+            python_entries.push((
+                "migrate".to_string(),
+                "python manage.py migrate".to_string(),
+                "manage.py".to_string(),
+            ));
+        }
+
+        if pyproject_content.contains("[tool.poetry.scripts]")
+            || pyproject_content.contains("[project.scripts]")
+        {
+            python_entries.push((
+                "install".to_string(),
+                "pip install -e .".to_string(),
+                "pyproject.toml".to_string(),
+            ));
+        }
+
+        let py_lc = pyproject_content.to_lowercase();
+        let req_lc = requirements_content.to_lowercase();
+        let combined_lc = format!("{}\n{}", py_lc, req_lc);
+
+        if combined_lc.contains("fastapi") || combined_lc.contains("uvicorn") {
+            let app_target = infer_uvicorn_target(&node_path);
+            python_entries.push((
+                "dev".to_string(),
+                format!("uvicorn {} --reload", app_target),
+                "pyproject.toml".to_string(),
+            ));
+        } else if combined_lc.contains("flask") {
+            python_entries.push((
+                "dev".to_string(),
+                "flask run --reload".to_string(),
+                "pyproject.toml".to_string(),
+            ));
+        }
+
+        if combined_lc.contains("pytest") {
+            python_entries.push((
+                "pytest".to_string(),
+                "pytest".to_string(),
+                "pyproject.toml".to_string(),
+            ));
+        }
+
+        if combined_lc.contains("django") && node_path.join("manage.py").exists() {
+            python_entries.push((
+                "runserver".to_string(),
+                "python manage.py runserver".to_string(),
+                "manage.py".to_string(),
+            ));
+        }
+
+        if node_path.join("main.py").exists()
+            || node_path.join("app/main.py").exists()
+            || node_path.join("app.py").exists()
+            || node_path.join("server.py").exists()
+        {
+            let entry = if node_path.join("main.py").exists() {
+                "main.py"
+            } else if node_path.join("app/main.py").exists() {
+                "app/main.py"
+            } else if node_path.join("app.py").exists() {
+                "app.py"
+            } else {
+                "server.py"
+            };
+            python_entries.push((
+                "python".to_string(),
+                format!("python {}", entry),
+                entry.to_string(),
+            ));
+        }
+
+        let has_pytest_cmd = python_entries.iter().any(|(_, raw, _)| raw == "pytest");
+        if (has_requirements || has_pyproject) && !has_pytest_cmd {
+            python_entries.push((
+                "pytest".to_string(),
+                "pytest".to_string(),
+                "requirements.txt".to_string(),
+            ));
+        }
+
+        for (name, raw, source_file) in python_entries {
+            let (kind, cloud_cfg) = classify_raw_command(&name, &raw, &source_file);
+            let (command, args) = parse_command(&raw);
+            let id = make_command_id(&node.project_id, &node.id, &name, &command, &args);
             out.push(DiscoveredCommand {
                 id,
                 project_id: node.project_id.clone(),
                 node_id: node.id.clone(),
-                name: humanize_name(name),
+                name: humanize_name(&name),
                 command,
                 args: args.clone(),
                 source: "python".to_string(),
-                source_file: source_file.to_string(),
+                source_file,
                 command_type: kind.clone(),
                 cwd_override: node.rel_path.clone(),
                 interpreter_override: None,
@@ -288,23 +413,30 @@ fn discover_node_commands(node: &ProjectNode, scopes: &[EnvScope]) -> Vec<Discov
                 cloud_job_config: cloud_cfg,
                 env_scope: scope.clone(),
                 command_fingerprint: short_hash(&format!("{}|{}", name, raw)),
-                raw_cmd: raw.to_string(),
+                raw_cmd: raw,
                 category: category_from_type(&kind),
                 sort_order: category_sort_order(&category_from_type(&kind)),
                 is_custom: false,
             });
-        };
+        }
 
-        if node_path.join("manage.py").exists() {
-            add("runserver", "python manage.py runserver", "manage.py");
-            add("migrate", "python manage.py migrate", "manage.py");
-        }
-        if node_path.join("main.py").exists() || node_path.join("app/main.py").exists() {
-            add("python", "python main.py", "main.py");
-        }
-        if node_path.join("requirements.txt").exists() || node_path.join("pyproject.toml").exists()
-        {
-            add("pytest", "pytest", "requirements.txt");
+        if let Ok(py_env) = detect_python_environment(&node_path) {
+            for cmd in out
+                .iter_mut()
+                .filter(|c| c.node_id == node.id && c.requires_venv)
+            {
+                let resolved = apply_python_substitution(cmd, &py_env);
+                cmd.command = resolved.command;
+                cmd.args = resolved.args;
+                cmd.interpreter_override = resolved.interpreter_override;
+            }
+        } else if let Some(interpreter) = &node.python_interpreter_path {
+            for cmd in out
+                .iter_mut()
+                .filter(|c| c.node_id == node.id && c.requires_venv)
+            {
+                cmd.interpreter_override = Some(interpreter.clone());
+            }
         }
     }
 

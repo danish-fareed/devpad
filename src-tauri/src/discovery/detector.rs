@@ -1,3 +1,4 @@
+use crate::discovery::python::{detect_venv_path, python_binary_for_venv};
 use crate::discovery::types::{
     EnvScope, ProjectNode, ProjectNodeType, ProjectTopology, RuntimeKind, WorkspacePackageManager,
 };
@@ -494,6 +495,14 @@ pub fn detect_topology(input_path: &Path) -> Result<ProjectTopology, DetectError
         None
     };
 
+    let root_runtimes = detect_runtime_kinds(&root)?;
+    let root_python_interpreter = if root_runtimes.contains(&RuntimeKind::Python) {
+        detect_venv_path(&root)
+            .map(|venv| python_binary_for_venv(&venv).to_string_lossy().to_string())
+    } else {
+        None
+    };
+
     let root_rel = ".".to_string();
     let root_node = ProjectNode {
         id: node_id(&project_id, &root_rel),
@@ -510,8 +519,8 @@ pub fn detect_topology(input_path: &Path) -> Result<ProjectTopology, DetectError
         } else {
             ProjectNodeType::Standalone
         },
-        runtimes: detect_runtime_kinds(&root)?,
-        python_interpreter_path: None,
+        runtimes: root_runtimes,
+        python_interpreter_path: root_python_interpreter,
         workspace_package_manager: workspace_pm,
         is_runnable: true,
         sort_order: 0,
@@ -529,6 +538,12 @@ pub fn detect_topology(input_path: &Path) -> Result<ProjectTopology, DetectError
         } else {
             ProjectNodeType::Subproject
         };
+        let python_interpreter_path = if child.runtimes.contains(&RuntimeKind::Python) {
+            detect_venv_path(&child.path)
+                .map(|venv| python_binary_for_venv(&venv).to_string_lossy().to_string())
+        } else {
+            None
+        };
         nodes.push(ProjectNode {
             id: node_id(&project_id, &rel),
             project_id: project_id.clone(),
@@ -538,7 +553,7 @@ pub fn detect_topology(input_path: &Path) -> Result<ProjectTopology, DetectError
             rel_path: rel,
             node_type,
             runtimes: child.runtimes.clone(),
-            python_interpreter_path: None,
+            python_interpreter_path,
             workspace_package_manager: None,
             is_runnable: child.is_runnable,
             sort_order: (idx + 1) as i32,
@@ -549,6 +564,12 @@ pub fn detect_topology(input_path: &Path) -> Result<ProjectTopology, DetectError
         let rel = normalize_rel_path(&root, &initial_child)?;
         if rel != "." && !nodes.iter().any(|n| n.rel_path == rel) {
             let runtimes = detect_runtime_kinds(&initial_child)?;
+            let python_interpreter_path = if runtimes.contains(&RuntimeKind::Python) {
+                detect_venv_path(&initial_child)
+                    .map(|venv| python_binary_for_venv(&venv).to_string_lossy().to_string())
+            } else {
+                None
+            };
             nodes.push(ProjectNode {
                 id: node_id(&project_id, &rel),
                 project_id: project_id.clone(),
@@ -562,7 +583,7 @@ pub fn detect_topology(input_path: &Path) -> Result<ProjectTopology, DetectError
                     ProjectNodeType::Subproject
                 },
                 runtimes,
-                python_interpreter_path: None,
+                python_interpreter_path,
                 workspace_package_manager: None,
                 is_runnable: true,
                 sort_order: nodes.len() as i32,
