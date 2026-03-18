@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicholasgma/varlock/main/schema.json",
   "productName": "Devpad",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "identifier": "com.varlock.ui",
   "build": {
     "beforeDevCommand": "npm run dev",
