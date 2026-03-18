@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import * as commands from "@/lib/commands";
 import { useEnvironmentStore } from "@/stores/environmentStore";
+import { useCommandStore } from "@/stores/commandStore";
 
 /**
  * Watches the active project's directory for `.env*` file changes.
@@ -16,6 +17,7 @@ export function useFileWatcher(
 ) {
   const loadEnvironment = useEnvironmentStore((s) => s.loadEnvironment);
   const activeEnv = useEnvironmentStore((s) => s.activeEnv);
+  const scanProject = useCommandStore((s) => s.scanProject);
 
   // Keep refs so the event handler always sees current values
   // without causing the effect to re-run on every env change.
@@ -52,6 +54,7 @@ export function useFileWatcher(
         // Only reload if the event is for our active project
         if (event.payload === idRef.current && pathRef.current) {
           loadEnvironment(pathRef.current, envRef.current);
+          scanProject(pathRef.current);
         }
       });
 
@@ -71,5 +74,5 @@ export function useFileWatcher(
       if (unlistenFn) unlistenFn();
       commands.unwatchProject(projectId!).catch(() => {});
     };
-  }, [projectId, projectPath, loadEnvironment]);
+  }, [projectId, projectPath, loadEnvironment, scanProject]);
 }

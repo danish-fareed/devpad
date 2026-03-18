@@ -35,6 +35,10 @@ export function CommandCard({ command }: CommandCardProps) {
 
   const cwd = activeProject?.path || "";
   const currentEnv = envName || "development";
+  const scopePath = command.envScope?.scopePath ?? ".";
+  const sourceFile = command.sourceFile || "unknown";
+  const commandType = command.commandType || "local-process";
+  const rawCmd = command.rawCmd || [command.command, ...(command.args ?? [])].join(" ");
 
   // Uptime ticker
   useEffect(() => {
@@ -54,12 +58,12 @@ export function CommandCard({ command }: CommandCardProps) {
       setShowConfirm(true);
       return;
     }
-    launchCommand(cwd, command, currentEnv);
+    launchCommand(command, currentEnv);
   };
 
   const handleConfirmedPlay = () => {
     setShowConfirm(false);
-    if (cwd) launchCommand(cwd, command, currentEnv);
+    if (cwd) launchCommand(command, currentEnv);
   };
 
   const handleDismiss = () => stopCommand(command.id);
@@ -69,7 +73,7 @@ export function CommandCard({ command }: CommandCardProps) {
   };
 
   const handleRunInTerminal = () => {
-    if (cwd) commands.runInTerminal(cwd, command.rawCmd);
+    if (cwd) commands.runInTerminal(cwd, rawCmd);
   };
 
   return (
@@ -87,7 +91,10 @@ export function CommandCard({ command }: CommandCardProps) {
             {command.name}
           </div>
           <div className="text-[11px] font-mono text-text-muted truncate mt-0.5">
-            {command.rawCmd}
+             {rawCmd}
+          </div>
+          <div className="text-[10px] text-text-muted truncate mt-0.5">
+            {scopePath}:{sourceFile} · {commandType}
           </div>
         </div>
 
@@ -146,7 +153,7 @@ export function CommandCard({ command }: CommandCardProps) {
               ⚠ Production Safety Guard
             </div>
             <div className="text-[12px] text-text-secondary mb-4 leading-5">
-              Run <span className="font-mono font-medium bg-surface-tertiary px-1.5 py-0.5 rounded">{command.rawCmd}</span> on <span className="text-danger font-medium">{currentEnv}</span>?
+              Run <span className="font-mono font-medium bg-surface-tertiary px-1.5 py-0.5 rounded">{rawCmd}</span> on <span className="text-danger font-medium">{currentEnv}</span>?
             </div>
             <div className="flex gap-2 justify-end">
               <button

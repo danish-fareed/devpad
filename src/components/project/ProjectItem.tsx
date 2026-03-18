@@ -1,6 +1,8 @@
 import type { Project } from "@/lib/types";
 import { STATUS_COLORS } from "@/lib/constants";
 import { Pin, FolderOpen } from "lucide-react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface ProjectItemProps {
   project: Project;
@@ -10,9 +12,7 @@ interface ProjectItemProps {
   onUnpin?: () => void;
   onClick: () => void;
   draggable?: boolean;
-  onDragStart?: (e: React.DragEvent) => void;
-  onDragOver?: (e: React.DragEvent) => void;
-  onDrop?: (e: React.DragEvent) => void;
+  isDragging?: boolean;
 }
 
 /**
@@ -26,19 +26,23 @@ export function ProjectItem({
   onUnpin,
   onClick,
   draggable,
-  onDragStart,
-  onDragOver,
-  onDrop
+  isDragging,
 }: ProjectItemProps) {
   const statusColor = STATUS_COLORS[project.status];
+  const sortable = useSortable({ id: project.id, disabled: !draggable });
+
+  const style = {
+    transform: CSS.Transform.toString(sortable.transform),
+    transition: sortable.transition,
+  };
 
   return (
     <div
-      draggable={draggable}
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      className="group relative"
+      ref={sortable.setNodeRef}
+      style={style}
+      className={`group relative ${isDragging ? "opacity-70" : "opacity-100"}`}
+      {...(draggable ? sortable.attributes : {})}
+      {...(draggable ? sortable.listeners : {})}
     >
       <div
         role="button"

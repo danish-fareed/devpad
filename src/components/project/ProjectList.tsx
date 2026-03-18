@@ -1,5 +1,22 @@
 import { useState } from "react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragStartEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { useProjectStore } from "@/stores/projectStore";
+import { useCommandStore } from "@/stores/commandStore";
 import { ProjectItem } from "./ProjectItem";
 
 /**
@@ -15,10 +32,21 @@ export function ProjectList() {
     pinProject,
     unpinProject,
     reorderPinnedProjects,
-    setView
+    setView,
+    getSelectedNodeForProject,
   } = useProjectStore();
+  const setSelectedNodeId = useCommandStore((s) => s.setSelectedNodeId);
 
   const [draggedId, setDraggedId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   if (isLoading && projects.length === 0) {
     return (
@@ -41,32 +69,21 @@ export function ProjectList() {
   }
 
   const pinnedProjects = pinnedProjectIds
-    .map(id => projects.find(p => p.id === id))
-    .filter(Boolean) as any[];
+    .map((id) => projects.find((p) => p.id === id))
+    .filter((project): project is (typeof projects)[number] => Boolean(project));
 
-  const otherProjects = projects.filter(p => !pinnedProjectIds.includes(p.id));
+  const otherProjects = projects.filter((p) => !pinnedProjectIds.includes(p.id));
 
-  const handleDragStart = (id: string) => {
-    setDraggedId(id);
-  };
-
-  const handleDragOver = (e: React.DragEvent, id: string) => {
-    e.preventDefault();
-    if (draggedId === null || draggedId === id) return;
-
-    const currentOrder = [...pinnedProjectIds];
-    const draggedIdx = currentOrder.indexOf(draggedId);
-    const targetIdx = currentOrder.indexOf(id);
-
-    if (draggedIdx !== -1 && targetIdx !== -1) {
-      currentOrder.splice(draggedIdx, 1);
-      currentOrder.splice(targetIdx, 0, draggedId);
-      reorderPinnedProjects(currentOrder);
-    }
-  };
-
-  const handleDragEnd = () => {
+  const handleDragEnd = (event: DragEndEvent) => {
+    const activeId = String(event.active.id);
+    const overId = event.over ? String(event.over.id) : null;
     setDraggedId(null);
+    if (!overId || activeId === overId) return;
+
+    const oldIndex = pinnedProjectIds.indexOf(activeId);
+    const newIndex = pinnedProjectIds.indexOf(overId);
+    if (oldIndex < 0 || newIndex < 0) return;
+    reorderPinnedProjects(arrayMove(pinnedProjectIds, oldIndex, newIndex));
   };
 
   return (
@@ -79,25 +96,38 @@ export function ProjectList() {
               Pinned
             </span>
           </div>
-          <div className="flex flex-col gap-0.5">
-            {pinnedProjects.map((project) => (
-              <ProjectItem
-                key={`pinned-${project.id}`}
-                project={project}
-                isActive={activeProject?.id === project.id}
-                isPinned={true}
-                onUnpin={() => unpinProject(project.id)}
-                onClick={() => {
-                  setActiveProject(project);
-                  setView("dashboard");
-                }}
-                draggable={true}
-                onDragStart={() => handleDragStart(project.id)}
-                onDragOver={(e) => handleDragOver(e, project.id)}
-                onDrop={handleDragEnd}
-              />
-            ))}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={(event: DragStartEvent) => setDraggedId(String(event.active.id))}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={pinnedProjectIds}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="flex flex-col gap-0.5">
+                {pinnedProjects.map((project) => (
+                  <div key={`pinned-${project.id}`}>
+                  <ProjectItem
+                    project={project}
+                    isActive={activeProject?.id === project.id}
+                    isPinned={true}
+                    onUnpin={() => unpinProject(project.id)}
+                    onClick={() => {
+                      setActiveProject(project);
+                      setView("dashboard");
+                      const remembered = getSelectedNodeForProject(project.id);
+                      setSelectedNodeId(remembered);
+                    }}
+                    draggable={true}
+                    isDragging={draggedId === project.id}
+                  />
+                  </div>
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
 
           {/* Separator */}
           <div className="px-4 py-1">
@@ -116,17 +146,20 @@ export function ProjectList() {
       )}
       <div className="flex flex-col gap-0.5">
         {otherProjects.map((project) => (
-          <ProjectItem
-            key={project.id}
-            project={project}
-            isActive={activeProject?.id === project.id}
-            isPinned={false}
-            onPin={() => pinProject(project.id)}
-            onClick={() => {
-              setActiveProject(project);
-              setView("dashboard");
-            }}
-          />
+          <div key={project.id}>
+            <ProjectItem
+              project={project}
+              isActive={activeProject?.id === project.id}
+              isPinned={false}
+              onPin={() => pinProject(project.id)}
+              onClick={() => {
+                setActiveProject(project);
+                setView("dashboard");
+                const remembered = getSelectedNodeForProject(project.id);
+                setSelectedNodeId(remembered);
+              }}
+            />
+          </div>
         ))}
       </div>
     </div>

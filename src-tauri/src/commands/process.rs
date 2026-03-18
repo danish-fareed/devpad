@@ -2,8 +2,10 @@ use crate::state::process_state::ProcessState;
 use crate::state::vault_state::VaultState;
 use crate::varlock::cli;
 use crate::varlock::types::ProcessEvent;
+use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
+use std::path::Path;
 use tauri::ipc::Channel;
 use tauri::State;
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -22,6 +24,80 @@ pub enum LaunchError {
     VaultResolutionFailed { key: String, reason: String },
     SpawnFailed { reason: String },
     InvalidInput { reason: String },
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct LaunchOptions {
+    pub cwd_override: Option<String>,
+    pub interpreter_override: Option<String>,
+    pub command_type: Option<LaunchCommandType>,
+    pub orchestrator_stop: Option<StopStrategy>,
+    pub env_scope_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum LaunchCommandType {
+    LocalProcess,
+    OneShot,
+    CloudJob,
+    Orchestrator,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StopStrategy {
+    pub command: String,
+    pub args: Vec<String>,
+}
+
+fn normalize_scoped_cwd(root: &str, scope: &str) -> Result<String, LaunchError> {
+    if scope.trim().is_empty() || scope == "." {
+        return Ok(root.to_string());
+    }
+    let joined = Path::new(root).join(scope);
+    let canonical_root = Path::new(root).canonicalize().map_err(|e| LaunchError::InvalidInput {
+        reason: format!("invalid root cwd: {}", e),
+    })?;
+    let canonical_joined = joined.canonicalize().map_err(|e| LaunchError::InvalidInput {
+        reason: format!("invalid cwd override: {}", e),
+    })?;
+    if !canonical_joined.starts_with(&canonical_root) {
+        return Err(LaunchError::InvalidInput {
+            reason: "cwd_override escapes project root".to_string(),
+        });
+    }
+    Ok(canonical_joined.to_string_lossy().to_string())
+}
+
+fn apply_interpreter_override(command: &str, interpreter_override: &Option<String>) -> String {
+    let Some(interpreter) = interpreter_override else {
+        return command.to_string();
+    };
+
+    let mut parts = match shell_words::split(command) {
+        Ok(v) if !v.is_empty() => v,
+        _ => return command.to_string(),
+    };
+
+    let first = parts[0].to_lowercase();
+    if matches!(first.as_str(), "python" | "python3" | "py" | "pytest" | "uvicorn" | "gunicorn") {
+        parts[0] = interpreter.clone();
+        parts
+            .iter()
+            .map(|p| {
+                if p.contains(' ') {
+                    format!("\"{}\"", p)
+                } else {
+                    p.clone()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" ")
+    } else {
+        command.to_string()
+    }
 }
 
 fn resolve_vault_uris(
@@ -87,6 +163,7 @@ pub async fn varlock_run(
     cwd: String,
     env: Option<String>,
     command: String,
+    launch_options: Option<LaunchOptions>,
     on_event: Channel<ProcessEvent>,
     process_state: State<'_, ProcessState>,
     vault: State<'_, VaultState>,
@@ -104,7 +181,26 @@ pub async fn varlock_run(
         });
     }
 
-    let load_result = cli::load(&cwd, env.as_deref())
+    let scoped_cwd = if let Some(opts) = &launch_options {
+        if let Some(scope_path) = &opts.env_scope_path {
+            normalize_scoped_cwd(&cwd, scope_path)?
+        } else if let Some(cwd_override) = &opts.cwd_override {
+            normalize_scoped_cwd(&cwd, cwd_override)?
+        } else {
+            cwd.clone()
+        }
+    } else {
+        cwd.clone()
+    };
+
+    let effective_command = apply_interpreter_override(
+        &command,
+        &launch_options
+            .as_ref()
+            .and_then(|o| o.interpreter_override.clone()),
+    );
+
+    let load_result = cli::load(&scoped_cwd, env.as_deref())
         .await
         .map_err(|msg| LaunchError::EnvValidationFailed { issues: vec![msg] })?;
     if !load_result.valid {
@@ -134,7 +230,7 @@ pub async fn varlock_run(
     }
 
     let env_name = load_result.env.clone();
-    let resolved_env = resolve_vault_uris(env_map, &cwd, &env_name, &vault)?;
+    let resolved_env = resolve_vault_uris(env_map, &scoped_cwd, &env_name, &vault)?;
 
     let mut redaction_set = Vec::new();
     for var in &load_result.variables {
@@ -155,13 +251,13 @@ pub async fn varlock_run(
     redaction_set.dedup();
 
     let (binary, args, env_override) =
-        cli::build_run_command(&cwd, env.as_deref(), &command)
+        cli::build_run_command(&scoped_cwd, env.as_deref(), &effective_command)
             .await
             .map_err(|reason| LaunchError::CommandNotFound { command: reason })?;
 
     let mut cmd = Command::new(&binary);
     cmd.args(&args);
-    cmd.current_dir(&cwd);
+    cmd.current_dir(&scoped_cwd);
     cmd.envs(&resolved_env);
 
     // Set environment override
@@ -301,6 +397,14 @@ pub async fn process_kill(
     process_state: State<'_, ProcessState>,
 ) -> Result<(), String> {
     process_state.kill(&process_id)
+}
+
+#[tauri::command]
+pub async fn stop_command(
+    session_id: String,
+    process_state: State<'_, ProcessState>,
+) -> Result<(), String> {
+    process_state.kill(&session_id)
 }
 
 /// Spawn a raw command directly (no varlock wrapping, no shell interpreter).

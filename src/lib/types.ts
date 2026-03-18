@@ -94,20 +94,77 @@ export type CommandCategory =
   | "deploy"
   | "docker"
   | "custom"
+  | "local-process"
+  | "one-shot"
+  | "cloud-job"
+  | "orchestrator"
   | "other";
+
+export type ProjectNodeType = "standalone" | "monorepo-root" | "monorepo-child" | "subproject";
+export type RuntimeKind = "node" | "python" | "docker-compose" | "rust" | "go";
+export type WorkspacePackageManager = "bun" | "npm" | "pnpm" | "yarn";
+export type CommandType = "local-process" | "one-shot" | "cloud-job" | "orchestrator";
+
+export interface ProjectNode {
+  id: string;
+  projectId: string;
+  parentId: string | null;
+  name: string;
+  path: string;
+  relPath: string;
+  nodeType: ProjectNodeType;
+  runtimes: RuntimeKind[];
+  pythonInterpreterPath: string | null;
+  workspacePackageManager: WorkspacePackageManager | null;
+  isRunnable: boolean;
+  sortOrder: number;
+}
+
+export interface EnvScope {
+  scopePath: string;
+  files: string[];
+  activeEnvName: string;
+  hasVarlock: boolean;
+  isPlainDotenv: boolean;
+}
+
+export interface CloudJobConfig {
+  provider: "eas" | "vercel" | "generic" | string;
+  submitParserRegex: string;
+  jobIdFieldName: string;
+  statusCommandTemplate: string;
+  logUrlTemplate: string;
+  pollIntervalMs: number;
+}
 
 export interface DiscoveredCommand {
   id: string;
+  projectId: string;
+  nodeId: string;
   name: string;
+  command: string;
+  args: string[];
+  source: string;
   rawCmd: string;
   sourceFile: string;
+  commandType: CommandType;
+  cwdOverride: string;
+  interpreterOverride: string | null;
+  requiresVenv: boolean;
+  cloudJobConfig: CloudJobConfig | null;
+  envScope: EnvScope;
+  commandFingerprint: string;
   category: CommandCategory;
   isCustom: boolean;
   sortOrder: number;
 }
 
 export interface ProjectScan {
+  projectId: string;
+  rootNodeId: string;
+  nodes: ProjectNode[];
   commands: DiscoveredCommand[];
+  envScopes: EnvScope[];
   techStack: string[];
   hasVarlock: boolean;
   envTier: string;

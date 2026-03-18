@@ -11,6 +11,7 @@ import { ScanResultsPanel } from "@/components/scan/ScanResultsPanel";
 import { DashboardPage } from "@/components/dashboard/DashboardPage";
 import { VaultPage } from "@/components/vault/VaultPage";
 import { CommandGrid } from "@/components/commands/CommandGrid";
+import { ScopesBar } from "@/components/project/ScopesBar";
 import { useScanStore } from "@/stores/scanStore";
 import { FolderOpen, Code, TextCursorInput, Terminal } from "lucide-react";
 import * as commands from "@/lib/commands";
@@ -57,7 +58,9 @@ function DashboardView() {
   const { activeProject } = useProjectStore();
   const { scanProject, reset } = useCommandStore();
   const scanError = useCommandStore((s) => s.scanError);
-  const { loadEnvironment, loadResult, isLoading } = useEnvironmentStore();
+  const selectedNodeId = useCommandStore((s) => s.selectedNodeId);
+  const selectedScopePath = useCommandStore((s) => s.selectedScopePath);
+  const { loadEnvironment, loadResult, isLoading, activeEnv } = useEnvironmentStore();
   const [showEnvView, setShowEnvView] = useState(true);
   const scan = useCommandStore((s) => s.scan);
 
@@ -66,11 +69,29 @@ function DashboardView() {
   useEffect(() => {
     if (activeProject?.path) {
       scanProject(activeProject.path);
-      loadEnvironment(activeProject.path);
     } else {
       reset();
     }
   }, [activeProject?.path, activeProject?.id]);
+
+  useEffect(() => {
+    if (!activeProject?.path) return;
+
+    const rootNodeId = scan?.rootNodeId;
+    const selectedNode = scan?.nodes.find((n) => n.id === selectedNodeId);
+
+    let envCwd = activeProject.path;
+    if (scan && rootNodeId && selectedNodeId && selectedNodeId !== rootNodeId && selectedNode) {
+      envCwd = selectedNode.path;
+    } else if (scan && rootNodeId && selectedScopePath !== "all") {
+      const scopedNode = scan.nodes.find((n) => n.relPath === selectedScopePath);
+      if (scopedNode) {
+        envCwd = scopedNode.path;
+      }
+    }
+
+    loadEnvironment(envCwd, activeEnv);
+  }, [activeProject?.path, activeProject?.id, scan?.rootNodeId, selectedNodeId, selectedScopePath, activeEnv, loadEnvironment]);
 
   // Counts for tab badges
   const varCount = loadResult?.variables.length ?? 0;
@@ -152,8 +173,13 @@ function DashboardView() {
         </div>
       </div>
 
+      {/* ── Scopes Bar ── */}
+      {scan && scan.nodes.length > 1 && (
+        <ScopesBar />
+      )}
+
       {/* ── Tab Switcher with count badges ── */}
-      <div className="flex bg-surface-tertiary/60 p-1 rounded-lg self-start relative border border-border-light gap-0.5 shrink-0">
+      <div className="flex bg-surface-tertiary/60 p-1 rounded-lg self-start relative border border-border-light gap-0.5 shrink-0 mt-1">
         <button
           onClick={() => setShowEnvView(true)}
           className={`flex items-center gap-2 px-5 py-1.5 rounded-md text-[12px] font-medium transition-all duration-200 cursor-pointer border-none z-10 ${

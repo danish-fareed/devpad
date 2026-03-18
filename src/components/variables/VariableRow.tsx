@@ -31,6 +31,7 @@ export function VariableRow({ variable, isSelected, onSelect, onDelete, isLast }
   const activeProject = useProjectStore((s) => s.activeProject);
   const activeEnv = useEnvironmentStore((s) => s.activeEnv);
   const setVariable = useVaultStore((s) => s.setVariable);
+  const deleteVariable = useVaultStore((s) => s.deleteVariable);
 
   const isRecommended = !variable.sensitive && isSensitiveKey(variable.key);
 
@@ -171,6 +172,93 @@ export function VariableRow({ variable, isSelected, onSelect, onDelete, isLast }
     }
   };
 
+  const handleRemoveFromVault = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+
+    if (!activeProject || variable.value === null) return;
+
+    try {
+      // Restore plaintext value from resolved runtime value into env files.
+      const candidateEnvPaths = [
+        `${activeProject.path}/.env`,
+        `${activeProject.path}/.env.${activeEnv}`,
+        `${activeProject.path}/.env.local`,
+        `${activeProject.path}/.env.${activeEnv}.local`,
+      ];
+
+      const refUri = `varlock://vault/${variable.key}`;
+
+      for (const envPath of candidateEnvPaths) {
+        let envContent = "";
+        try {
+          envContent = await readEnvFile(envPath);
+        } catch {
+          continue;
+        }
+
+        const lines = envContent.split("\n");
+        let touched = false;
+
+        const newLines = lines.map((line) => {
+          const trimmed = line.trim();
+          if (trimmed.startsWith("#") || !trimmed.includes("=")) return line;
+
+          const isExport = trimmed.startsWith("export ");
+          const contentStr = isExport ? trimmed.slice(7) : trimmed;
+          const eqIdx = contentStr.indexOf("=");
+          if (eqIdx < 0) return line;
+
+          const key = contentStr.slice(0, eqIdx).trim();
+          if (key !== variable.key) return line;
+
+          const rawValue = contentStr.slice(eqIdx + 1).trim();
+          if (!rawValue.startsWith(refUri)) return line;
+
+          const prefix = isExport ? "export " : "";
+          const commentIdx = contentStr.indexOf("#", eqIdx);
+          const comment = commentIdx > -1 ? ` ${contentStr.slice(commentIdx)}` : "";
+          touched = true;
+          return `${prefix}${key}=${variable.value}${comment}`;
+        });
+
+        if (touched) {
+          await writeEnvFile(envPath, newLines.join("\n"));
+        }
+      }
+
+      await deleteVariable(activeProject.id, activeEnv, variable.key);
+
+      // Also mark it non-sensitive in .env.schema when available.
+      const schemaPath = `${activeProject.path}/.env.schema`;
+      try {
+        const schemaContent = await readEnvFile(schemaPath);
+        if (schemaContent) {
+          const existingEntries = parseSchema(schemaContent);
+          const existing = existingEntries.find((entry) => entry.key === variable.key);
+          if (existing) {
+            const updatedEntry: SchemaEntry = {
+              ...existing,
+              sensitive: false,
+            };
+            const nextSchemaContent = updateSchemaEntry(schemaContent, updatedEntry);
+            await writeEnvFile(schemaPath, nextSchemaContent);
+          }
+        }
+      } catch {
+        // Schema file is optional.
+      }
+
+      useEnvironmentStore.getState().loadEnvironment(activeProject.path);
+
+      // Refresh vault global variables so the Vault tab updates immediately
+      const { projects } = useProjectStore.getState();
+      useVaultStore.getState().loadAllGlobalVariables(projects);
+    } catch (e) {
+      console.error("Failed to remove variable from vault:", e);
+    }
+  };
+
   return (
     <div
       className={`group relative grid grid-cols-[200px_1fr_80px_90px_32px] px-4 py-2.5 gap-3 items-center transition-all border-none bg-transparent ${
@@ -286,7 +374,7 @@ export function VariableRow({ variable, isSelected, onSelect, onDelete, isLast }
             </button>
           ) : (
             <button
-              onClick={(e) => { e.stopPropagation(); setShowMenu(false); }}
+              onClick={handleRemoveFromVault}
               className="w-full text-left px-3 py-1.5 text-[12px] text-text hover:bg-surface-tertiary cursor-pointer border-none bg-transparent flex items-center gap-2 transition-colors"
             >
               <ShieldOff size={12} strokeWidth={1.2} className="text-text-muted" />

@@ -3,29 +3,25 @@ import type {
   DiscoveredCommand,
   ProjectScan,
   RunningCommandInfo,
+  CommandType,
 } from "@/lib/types";
 import * as commands from "@/lib/commands";
 
-// ── Store ──
-
 interface CommandState {
-  /** Scan result for the active project */
   scan: ProjectScan | null;
-  /** Scan error for active project */
   scanError: string | null;
-  /** Loading state */
   isScanning: boolean;
-  /** Commands launched in OS terminal (keyed by command.id) */
+  selectedNodeId: string | null;
+  selectedScopePath: string;
   running: Record<string, RunningCommandInfo>;
-  /** Pre-flight validation errors keyed by command.id */
   commandErrors: Record<string, string[]>;
-  /** Log buffer — kept empty since OS terminal handles output */
   logBuffers: Record<string, string[]>;
 
-  // Actions
   scanProject: (cwd: string) => Promise<void>;
+  setSelectedNodeId: (nodeId: string | null) => void;
+  setSelectedScopePath: (scopePath: string) => void;
+  getVisibleCommands: () => DiscoveredCommand[];
   launchCommand: (
-    cwd: string,
     command: DiscoveredCommand,
     envName: string,
   ) => Promise<void>;
@@ -34,10 +30,19 @@ interface CommandState {
   reset: () => void;
 }
 
-export const useCommandStore = create<CommandState>((set) => ({
+function statusFromType(type: CommandType): RunningCommandInfo["status"] {
+  if (type === "cloud-job") {
+    return "running";
+  }
+  return "running";
+}
+
+export const useCommandStore = create<CommandState>((set, get) => ({
   scan: null,
   scanError: null,
   isScanning: false,
+  selectedNodeId: null,
+  selectedScopePath: "all",
   running: {},
   commandErrors: {},
   logBuffers: {},
@@ -46,21 +51,29 @@ export const useCommandStore = create<CommandState>((set) => ({
     set({ isScanning: true, scanError: null });
     try {
       const scan = await commands.scanProject(cwd);
-      set({ scan, isScanning: false, scanError: null });
+      const selectedNodeId = get().selectedNodeId ?? scan.rootNodeId;
+      const nodeExists = scan.nodes.some((n) => n.id === selectedNodeId);
+      set({
+        scan,
+        isScanning: false,
+        scanError: null,
+        selectedNodeId: nodeExists ? selectedNodeId : scan.rootNodeId,
+      });
     } catch (e) {
       console.error("Failed to scan project:", e);
       set({ isScanning: false, scanError: String(e) });
     }
   },
 
-  launchCommand: async (
-    cwd: string,
-    command: DiscoveredCommand,
-    envName: string,
-  ) => {
+  setSelectedNodeId: (nodeId) => set({ selectedNodeId: nodeId }),
+
+  setSelectedScopePath: (scopePath) => set({ selectedScopePath: scopePath }),
+
+  getVisibleCommands: () => [],
+
+  launchCommand: async (command, envName) => {
     const commandId = command.id;
 
-    // Clear previous errors
     set((state) => {
       const errors = { ...state.commandErrors };
       delete errors[commandId];
@@ -68,17 +81,21 @@ export const useCommandStore = create<CommandState>((set) => ({
     });
 
     try {
-      // Run in OS terminal — always interactive, user sees real terminal
-      await commands.runInTerminal(cwd, command.rawCmd);
+      const cwd = get().scan?.nodes.find((n) => n.id === command.nodeId)?.path;
+      if (!cwd) {
+        throw new Error("Unable to resolve command working directory");
+      }
 
-      // Track as launched
+      const commandLine = [command.command, ...command.args].join(" ");
+      await commands.runInTerminal(cwd, commandLine);
+
       set((state) => ({
         running: {
           ...state.running,
           [commandId]: {
             commandId,
             sessionId: "",
-            status: "running",
+            status: statusFromType(command.commandType),
             startedAt: Date.now(),
             envName,
             logPeek: [],
@@ -96,7 +113,6 @@ export const useCommandStore = create<CommandState>((set) => ({
   },
 
   stopCommand: (commandId: string) => {
-    // Remove from running — the OS terminal is user-managed
     set((state) => {
       const r = { ...state.running };
       delete r[commandId];
@@ -119,6 +135,8 @@ export const useCommandStore = create<CommandState>((set) => ({
       scan: null,
       scanError: null,
       isScanning: false,
+      selectedNodeId: null,
+      selectedScopePath: "all",
       running: {},
       commandErrors: {},
       logBuffers: {},

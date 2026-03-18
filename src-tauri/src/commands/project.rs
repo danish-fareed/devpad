@@ -1,6 +1,8 @@
 use crate::state::app_state::{AppState, Project, ProjectStatus};
+use crate::discovery::detector::resolve_registration_root;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 use tauri::State;
 
 fn derive_project_status(project_path: &Path) -> ProjectStatus {
@@ -65,30 +67,98 @@ pub async fn project_add(path: String, state: State<'_, AppState>) -> Result<Pro
         return Err(format!("Path is not a directory: {}", path));
     }
 
-    // Check for duplicate project
-    if state.has_project_with_path(&path) {
-        return Err(format!("Project already added: {}", path));
+    register_project_dir(project_path, &state)
+}
+
+/// Clone a GitHub repository into a destination directory and register it.
+#[tauri::command]
+pub async fn project_clone_github(
+    url: String,
+    destination_parent: String,
+    folder_name: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<Project, String> {
+    let trimmed_url = url.trim();
+    if trimmed_url.is_empty() {
+        return Err("Repository URL cannot be empty".to_string());
+    }
+    if !is_github_url(trimmed_url) {
+        return Err("Only GitHub repository URLs are supported".to_string());
     }
 
-    // Derive project name from directory name
-    let name = project_path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("Unknown Project")
-        .to_string();
+    let parent_dir = PathBuf::from(destination_parent.trim());
+    if !parent_dir.exists() {
+        return Err(format!(
+            "Destination directory does not exist: {}",
+            parent_dir.to_string_lossy()
+        ));
+    }
+    if !parent_dir.is_dir() {
+        return Err(format!(
+            "Destination path is not a directory: {}",
+            parent_dir.to_string_lossy()
+        ));
+    }
 
-    // Detect available environment files
-    let environments = detect_environments(project_path);
-
-    let project = Project {
-        id: uuid::Uuid::new_v4().to_string(),
-        name,
-        path: path.clone(),
-        environments,
-        status: derive_project_status(project_path),
+    let target_folder = if let Some(raw_name) = folder_name {
+        let name = raw_name.trim();
+        if name.is_empty() {
+            infer_repo_name(trimmed_url).ok_or_else(|| {
+                "Unable to infer repository folder name from URL. Provide a folder name.".to_string()
+            })?
+        } else {
+            validate_folder_name(name)?
+        }
+    } else {
+        infer_repo_name(trimmed_url).ok_or_else(|| {
+            "Unable to infer repository folder name from URL. Provide a folder name.".to_string()
+        })?
     };
 
-    Ok(state.add_project(project))
+    let target_dir = parent_dir.join(target_folder);
+    if target_dir.exists() {
+        return Err(format!(
+            "Destination already exists: {}",
+            target_dir.to_string_lossy()
+        ));
+    }
+
+    let url_for_cmd = trimmed_url.to_string();
+    let target_for_cmd = target_dir.clone();
+    let clone_result = tokio::task::spawn_blocking(move || {
+        Command::new("git")
+            .arg("clone")
+            .arg(url_for_cmd)
+            .arg(&target_for_cmd)
+            .output()
+    })
+    .await
+    .map_err(|e| format!("Clone task failed: {}", e))?;
+
+    match clone_result {
+        Ok(output) => {
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+                let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                let details = if !stderr.is_empty() {
+                    stderr
+                } else if !stdout.is_empty() {
+                    stdout
+                } else {
+                    "git clone failed with an unknown error".to_string()
+                };
+                return Err(format!("Failed to clone repository: {}", details));
+            }
+        }
+        Err(e) => {
+            return Err(format!(
+                "Failed to run git clone. Ensure Git is installed and available in PATH: {}",
+                e
+            ));
+        }
+    }
+
+    register_project_dir(&target_dir, &state)
 }
 
 /// Remove a project by ID.
@@ -151,4 +221,77 @@ fn detect_environments(dir: &Path) -> Vec<String> {
 
     envs.sort();
     envs
+}
+
+fn register_project_dir(project_path: &Path, state: &AppState) -> Result<Project, String> {
+    let resolved_root = resolve_registration_root(project_path)
+        .map_err(|e| format!("Failed to resolve registration root: {}", e))?;
+    let registration_path = resolved_root.root.to_string_lossy().to_string();
+
+    if state.has_project_with_path(&registration_path) {
+        return Err(format!("Project already added: {}", registration_path));
+    }
+
+    let name = resolved_root
+        .root
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("Unknown Project")
+        .to_string();
+
+    let environments = detect_environments(&resolved_root.root);
+
+    let project = Project {
+        id: uuid::Uuid::new_v4().to_string(),
+        name,
+        path: registration_path,
+        environments,
+        status: derive_project_status(&resolved_root.root),
+    };
+
+    Ok(state.add_project(project))
+}
+
+fn is_github_url(url: &str) -> bool {
+    let lower = url.to_ascii_lowercase();
+    lower.starts_with("https://github.com/")
+        || lower.starts_with("http://github.com/")
+        || lower.starts_with("git@github.com:")
+        || lower.starts_with("ssh://git@github.com/")
+}
+
+fn infer_repo_name(url: &str) -> Option<String> {
+    let normalized = url.trim().trim_end_matches('/');
+    let tail = if let Some(idx) = normalized.rfind(':') {
+        let ssh_like = normalized.starts_with("git@github.com:");
+        if ssh_like {
+            &normalized[idx + 1..]
+        } else {
+            normalized.rsplit('/').next()?
+        }
+    } else {
+        normalized.rsplit('/').next()?
+    };
+
+    let last_segment = tail.rsplit('/').next()?.trim_end_matches(".git").trim();
+    if last_segment.is_empty() {
+        None
+    } else {
+        Some(last_segment.to_string())
+    }
+}
+
+fn validate_folder_name(name: &str) -> Result<String, String> {
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        return Err("Folder name cannot be empty".to_string());
+    }
+    if trimmed == "." || trimmed == ".." {
+        return Err("Folder name cannot be '.' or '..'".to_string());
+    }
+    let invalid_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
+    if trimmed.chars().any(|c| invalid_chars.contains(&c)) {
+        return Err("Folder name contains invalid path characters".to_string());
+    }
+    Ok(trimmed.to_string())
 }

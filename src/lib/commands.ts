@@ -11,7 +11,21 @@ import type {
   ProcessEvent,
   Project,
   ProjectScan,
+  CommandType,
 } from "./types";
+
+export interface StopStrategy {
+  command: string;
+  args: string[];
+}
+
+export interface LaunchOptions {
+  cwdOverride?: string;
+  interpreterOverride?: string;
+  commandType?: CommandType;
+  orchestratorStop?: StopStrategy;
+  envScopePath?: string;
+}
 
 // ── Varlock CLI commands ──
 
@@ -70,6 +84,7 @@ export async function varlockRun(
   command: string,
   onEvent: (event: ProcessEvent) => void,
   env?: string,
+  launchOptions?: LaunchOptions,
 ): Promise<string> {
   const channel = new Channel<ProcessEvent>();
   channel.onmessage = onEvent;
@@ -78,6 +93,7 @@ export async function varlockRun(
       cwd,
       env,
       command,
+      launchOptions,
       onEvent: channel,
     });
   } catch (err) {
@@ -87,6 +103,10 @@ export async function varlockRun(
 
 export async function processKill(processId: string): Promise<void> {
   return invoke<void>("process_kill", { processId });
+}
+
+export async function stopCommand(sessionId: string): Promise<void> {
+  return invoke<void>("stop_command", { sessionId });
 }
 
 export async function directRun(
@@ -111,6 +131,18 @@ export async function projectList(): Promise<Project[]> {
 
 export async function projectAdd(path: string): Promise<Project> {
   return invoke<Project>("project_add", { path });
+}
+
+export async function projectCloneGithub(
+  url: string,
+  destinationParent: string,
+  folderName?: string,
+): Promise<Project> {
+  return invoke<Project>("project_clone_github", {
+    url,
+    destinationParent,
+    folderName,
+  });
 }
 
 export async function projectRemove(id: string): Promise<void> {

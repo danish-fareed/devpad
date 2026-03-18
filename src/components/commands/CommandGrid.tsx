@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { CommandCard } from "./CommandCard";
+import { EnvSelectorBar } from "./EnvSelectorBar";
 import { useCommandStore } from "@/stores/commandStore";
 import { useProjectStore } from "@/stores/projectStore";
 import * as commandsApi from "@/lib/commands";
@@ -105,7 +106,23 @@ const CATEGORY_CONFIG: Record<string, { label: string; icon: React.ReactNode }> 
 export function CommandGrid() {
   const scan = useCommandStore((s) => s.scan);
   const isScanning = useCommandStore((s) => s.isScanning);
+  const selectedNodeId = useCommandStore((s) => s.selectedNodeId);
+  const selectedScopePath = useCommandStore((s) => s.selectedScopePath);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  const visibleCommands = useMemo(() => {
+    if (!scan) return [];
+
+    const targetNodeId = selectedNodeId ?? scan.rootNodeId;
+    if (targetNodeId === scan.rootNodeId) {
+      if (selectedScopePath === "all") {
+        return scan.commands;
+      }
+      return scan.commands.filter((c) => c.envScope.scopePath === selectedScopePath);
+    }
+
+    return scan.commands.filter((c) => c.nodeId === targetNodeId);
+  }, [scan, selectedNodeId, selectedScopePath]);
 
   if (isScanning) {
     return (
@@ -118,7 +135,7 @@ export function CommandGrid() {
     );
   }
 
-  if (!scan || scan.commands.length === 0) {
+  if (!scan || visibleCommands.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 bg-surface rounded-xl border border-border-light">
         <div className="w-12 h-12 rounded-2xl bg-surface-tertiary flex items-center justify-center mb-4">
@@ -141,8 +158,8 @@ export function CommandGrid() {
   }
 
   // Group by category
-  const groups = new Map<string, typeof scan.commands>();
-  for (const cmd of scan.commands) {
+  const groups = new Map<string, typeof visibleCommands>();
+  for (const cmd of visibleCommands) {
     const cat = cmd.category;
     if (!groups.has(cat)) groups.set(cat, []);
     groups.get(cat)!.push(cmd);
@@ -151,22 +168,25 @@ export function CommandGrid() {
   return (
     <div className="animate-fade-in space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
-            Commands
-          </span>
-          <span className="text-[10px] font-medium text-text-muted bg-surface-tertiary rounded-full px-2 py-0.5 tabular-nums">
-            {scan.commands.length}
-          </span>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
+              Commands
+            </span>
+            <span className="text-[10px] font-medium text-text-muted bg-surface-tertiary rounded-full px-2 py-0.5 tabular-nums">
+              {visibleCommands.length}
+            </span>
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="h-7 px-3 rounded-lg text-[11px] font-medium text-text-secondary hover:text-text hover:bg-surface-secondary cursor-pointer bg-transparent border border-border-light flex items-center gap-1.5 transition-colors"
+          >
+            <Plus size={11} strokeWidth={2} />
+            Add Custom
+          </button>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="h-7 px-3 rounded-lg text-[11px] font-medium text-text-secondary hover:text-text hover:bg-surface-secondary cursor-pointer bg-transparent border border-border-light flex items-center gap-1.5 transition-colors"
-        >
-          <Plus size={11} strokeWidth={2} />
-          Add Custom
-        </button>
+        <EnvSelectorBar />
       </div>
 
       {/* Grouped command list */}

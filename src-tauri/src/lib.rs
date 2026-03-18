@@ -1,5 +1,7 @@
 mod cli_entry;
 mod commands;
+mod db;
+mod discovery;
 mod state;
 mod varlock;
 mod vault;
@@ -11,11 +13,17 @@ use state::process_state::ProcessState;
 use state::vault_state::VaultState;
 use vault::vault_db::VaultDb;
 use tauri::Manager;
+use rusqlite::Connection;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     if let Some(code) = cli_entry::maybe_handle_cli() {
         std::process::exit(code);
+    }
+
+    // Apply non-vault local DB migrations for project intelligence layer.
+    if let Err(e) = apply_local_project_intelligence_migration() {
+        eprintln!("Warning: failed to apply local project intelligence migration: {}", e);
     }
 
     // Open (or create) the vault database
@@ -44,9 +52,11 @@ pub fn run() {
             commands::varlock::migrate_project_to_varlock,
             commands::process::varlock_run,
             commands::process::process_kill,
+            commands::process::stop_command,
             commands::process::direct_run,
             commands::project::project_list,
             commands::project::project_add,
+            commands::project::project_clone_github,
             commands::project::project_remove,
             commands::project::pick_directory,
             commands::filesystem::read_env_file,
@@ -121,4 +131,18 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running Varlock UI");
+}
+
+fn apply_local_project_intelligence_migration() -> Result<(), String> {
+    let db_path = dirs::data_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("varlock-ui")
+        .join("app.db");
+    if let Some(parent) = db_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    db::project_intelligence::apply_project_intelligence_migration(&conn)
+        .map_err(|e| e.to_string())
 }
