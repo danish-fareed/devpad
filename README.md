@@ -1,4 +1,4 @@
-<img width="1202" height="802" alt="image" src="https://github.com/user-attachments/assets/6918db5c-8dad-4e87-8255-f236bdd7c270" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/6372bfb4-58dd-410b-8c5d-8f024671c853" />
 
 # Devpad
 
