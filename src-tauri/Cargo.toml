@@ -1,6 +1,6 @@
 [package]
 name = "devpad"
-version = "0.3.0"
+version = "0.3.1"
 description = "Devpad: A secure desktop application and GUI for managing environment variables"
 authors = ["Varlock Team"]
 edition = "2021"
