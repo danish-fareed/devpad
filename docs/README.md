@@ -1,23 +1,29 @@
 # Documentation
 
-This folder contains the working documentation for `varlock_ui`.
+This folder contains working documentation for Devpad.
 
-## Structure
+## Core docs (current source of truth)
 
-- `architecture/`
-  - Core system architecture and interface contracts
-- `plans/`
-  - Implementation plans and phased delivery docs
-- `design/`
-  - HTML mockups and design references used to shape the UI
-- `notes/`
-  - Scratch or temporary project notes
+### Product and integrations
 
-## Recommended reading order
+- `docs/product/INTEGRATIONS.md`
+- `docs/product/SUPPORT_MATRIX.md`
 
-1. `docs/architecture/ARCHITECTURE.md`
-2. `docs/plans/IMPLEMENTATION_PLAN_REMAINING.md`
-3. `docs/architecture/varlock_interface_contract.html`
-4. `docs/design/varlock_gui_main_view.html`
-5. `docs/design/varlock_terminal_panel.html`
-6. `docs/design/varlock_add_project_migrate.html`
+### Roadmap
+
+- `docs/roadmap/INTEGRATION_ROADMAP.md`
+
+### Development playbooks
+
+- `docs/development/PROJECT_START_TECHNIQUES.md`
+
+### Architecture
+
+- `docs/architecture/REPO_MODULES.md`
+
+## Legacy and reference material
+
+- `architecture/` contains older architecture notes and contracts that may not reflect the latest module boundaries.
+- `plans/` contains historical implementation plans.
+- `design/` contains design mockups and reference UI artifacts.
+- `notes/` contains temporary and exploratory notes.

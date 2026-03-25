@@ -9,11 +9,14 @@ import { VariableList } from "@/components/variables/VariableList";
 import { MigrationWizard } from "@/components/migration/MigrationWizard";
 import { ScanResultsPanel } from "@/components/scan/ScanResultsPanel";
 import { DashboardPage } from "@/components/dashboard/DashboardPage";
+import { IntegrationReadinessModal } from "@/components/dashboard/IntegrationReadinessModal";
 import { VaultPage } from "@/components/vault/VaultPage";
+import { IntegrationsPage } from "@/components/integrations/IntegrationsPage";
 import { CommandGrid } from "@/components/commands/CommandGrid";
 import { ScopesBar } from "@/components/project/ScopesBar";
 import { useScanStore } from "@/stores/scanStore";
-import { FolderOpen, Code, TextCursorInput, Terminal } from "lucide-react";
+import { Icon } from "@iconify/react";
+import { Info } from "lucide-react";
 import * as commands from "@/lib/commands";
 
 /**
@@ -34,6 +37,8 @@ export function AppLayout() {
         <div className="flex-1 overflow-auto flex flex-col relative bg-surface">
           {view === "vault" ? (
             <VaultPage />
+          ) : view === "integrations" ? (
+            <IntegrationsPage />
           ) : activeProject ? (
             activeProject.status === "migrationNeeded" ? (
               <MigrationWizard />
@@ -62,6 +67,7 @@ function DashboardView() {
   const selectedScopePath = useCommandStore((s) => s.selectedScopePath);
   const { loadEnvironment, loadResult, isLoading, activeEnv } = useEnvironmentStore();
   const [showEnvView, setShowEnvView] = useState(true);
+  const [showIntegrationModal, setShowIntegrationModal] = useState(false);
   const scan = useCommandStore((s) => s.scan);
 
   useFileWatcher(activeProject?.id, activeProject?.path);
@@ -132,6 +138,13 @@ function DashboardView() {
                 <span className="text-[10px] font-medium text-text-secondary">{statusConfig.label}</span>
               </div>
             )}
+            <button
+              onClick={() => setShowIntegrationModal(true)}
+              className="w-6 h-6 rounded-full flex items-center justify-center text-text-muted hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer border-none bg-transparent shrink-0"
+              title="Integration Readiness"
+            >
+              <Info size={14} />
+            </button>
           </div>
           {/* Breadcrumb-style path */}
           <p className="text-[11px] text-text-muted mt-0.5 font-mono">
@@ -146,21 +159,21 @@ function DashboardView() {
             className="w-7 h-7 rounded-md flex items-center justify-center text-text-muted hover:text-text hover:bg-surface transition-colors cursor-pointer border-none bg-transparent"
             title="Open in Explorer"
           >
-            <FolderOpen size={13} strokeWidth={1.3} />
+            <Icon icon="vscode-icons:default-folder-opened" className="w-[14px] h-[14px]" />
           </button>
           <button
             onClick={() => activeProject && commands.openInEditor(activeProject.path, "code")}
             className="w-7 h-7 rounded-md flex items-center justify-center text-text-muted hover:text-text hover:bg-surface transition-colors cursor-pointer border-none bg-transparent"
             title="Open in VS Code"
           >
-            <Code size={13} strokeWidth={1.3} />
+            <Icon icon="logos:visual-studio-code" className="w-[14px] h-[14px]" />
           </button>
           <button
             onClick={() => activeProject && commands.openInEditor(activeProject.path, "cursor")}
             className="w-7 h-7 rounded-md flex items-center justify-center text-text-muted hover:text-text hover:bg-surface transition-colors cursor-pointer border-none bg-transparent"
             title="Open in Cursor"
           >
-            <TextCursorInput size={13} strokeWidth={1.3} />
+            <Icon icon="simple-icons:cursor" className="w-[14px] h-[14px]" />
           </button>
           <div className="w-px h-4 bg-border-light mx-0.5" />
           <button
@@ -168,7 +181,7 @@ function DashboardView() {
             className="w-7 h-7 rounded-md flex items-center justify-center text-text-muted hover:text-text hover:bg-surface transition-colors cursor-pointer border-none bg-transparent"
             title="Open Terminal"
           >
-            <Terminal size={13} strokeWidth={1.3} />
+            <Icon icon="vscode-icons:file-type-powershell" className="w-[14px] h-[14px]" />
           </button>
         </div>
       </div>
@@ -176,6 +189,15 @@ function DashboardView() {
       {/* ── Scopes Bar ── */}
       {scan && scan.nodes.length > 1 && (
         <ScopesBar />
+      )}
+
+      {/* ── Integration Readiness Modal ── */}
+      {showIntegrationModal && (
+        <IntegrationReadinessModal
+          scan={scan}
+          projectName={activeProject?.name ?? ""}
+          onClose={() => setShowIntegrationModal(false)}
+        />
       )}
 
       {/* ── Tab Switcher with count badges ── */}

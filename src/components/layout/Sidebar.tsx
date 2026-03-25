@@ -6,7 +6,7 @@ import { AddProjectDialog } from "@/components/project/AddProjectDialog";
 import { useState } from "react";
 import type { AppView } from "@/lib/types";
 import * as commands from "@/lib/commands";
-import { LayoutDashboard, ShieldCheck, ChevronRight, Plus, ChevronLeft, Terminal, Activity } from "lucide-react";
+import { LayoutDashboard, ShieldCheck, ChevronRight, Plus, ChevronLeft, Terminal, Activity, Layers } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 /**
@@ -47,6 +47,11 @@ export function Sidebar() {
       id: "vault",
       label: "Vault",
       icon: <ShieldCheck size={17} strokeWidth={1.3} />,
+    },
+    {
+      id: "integrations",
+      label: "Integrations",
+      icon: <Layers size={17} strokeWidth={1.3} />,
     },
   ];
 

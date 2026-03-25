@@ -2,79 +2,78 @@
 
 # Devpad
 
-Devpad is a secure, local-first environment variable manager and vault. It allows developers to securely manage `.env` files across multiple projects without relying on cloud synchronization.
+Devpad is a local-first desktop control plane for running polyglot projects with one-click commands.
 
-Built for security and developer experience, Devpad ensures your secrets never leave your machine unless you explicitly export them. It acts as a GUI layer utilizing the zero-trust architecture of **varlock**.
+It detects project topology, infers runnable commands across common stacks, applies environment loading (Varlock or plain dotenv), prepares runtime prerequisites when possible, and streams execution logs back to the UI.
 
-## Attribution
-Devpad is built upon and utilizes the **[varlock](https://github.com/dmno-dev/varlock)** specification by the `dmno-dev` team.
+## Product Direction
 
-## Features
+- One app to run multi-stack projects from a single dashboard.
+- Framework-aware command discovery and launch classification.
+- Environment-safe execution with vault-backed secret resolution.
+- Local-first security model (no required cloud sync for secrets).
 
-- **Local-First Security:** Your secrets stay on your machine.
-- **Project Workspaces:** Manage `.env` files for multiple projects easily from a beautiful UI.
-- **Zero-Trust Cryptography:** 
-  - Argon2id for Key Derivation
-  - HKDF for Key Stretching
-  - XChaCha20-Poly1305 for Authenticated Encryption
-  - Auto-locking and strict memory zeroization
-- **Direct Variable Injection:** Start processes with secrets directly injected into their environment without writing plaintext `.env` files to disk.
-- **Cross-Platform:** Available on Windows, macOS, and Linux.
+## Integration-First Documentation
 
-## Architecture
+- Integration taxonomy: `docs/product/INTEGRATIONS.md`
+- Support matrix and maturity levels: `docs/product/SUPPORT_MATRIX.md`
+- Project start playbooks by stack: `docs/development/PROJECT_START_TECHNIQUES.md`
+- Integration roadmap and pending work: `docs/roadmap/INTEGRATION_ROADMAP.md`
+- Module map (frontend/backend boundaries): `docs/architecture/REPO_MODULES.md`
 
-Devpad is built as a generic desktop application using Tauri and Rust:
+## Support Levels
 
-- **Frontend:** React, TypeScript, TailwindCSS
-- **Backend Core:** Rust
-- **Database:** Local SQLite (`vault.db`) encrypted with master keys
-- **Process Management:** Native terminal spawning and direct `shell-words` invocation
+Devpad support is tracked using four levels:
+
+1. `Detected` - project/runtime is recognized during scan.
+2. `Runnable` - at least one command can be launched from the app.
+3. `Auto-Prepared` - runtime bootstrap/sync is automated before launch.
+4. `Fully Integrated` - full lifecycle behavior, UX parity, docs, and validation coverage.
+
+## Core Technologies
+
+- Frontend: React + TypeScript + Zustand + Tailwind
+- Desktop shell/backend: Tauri + Rust
+- Local storage: SQLite
+- Crypto primitives: Argon2id, HKDF, XChaCha20-Poly1305
 
 ## Security
 
-Devpad was designed with defense-in-depth principles. For a complete overview of the threat model and recent security audits, see the `docs/audit` folder.
+Security and audit artifacts are in `docs/audit`.
 
-- **Content Security Policy:** Strict CSP enforces isolation between the web UI and Native APIs.
-- **Keyring Protection:** Master credentials are obfuscated before storage in the OS-native Keychain.
-- **No Path Traversal:** File system access is tightly restricted to registered project directories.
+- Vault secrets remain local unless explicitly exported.
+- Key material is derived and managed with defensive defaults.
+- Process execution includes guarded environment resolution.
 
-## Development Setup
+## Contributor Setup
 
-### Prerequisites
+Prerequisites:
 
-- [Node.js](https://nodejs.org/) (v16+)
-- [Rust](https://www.rust-lang.org/) (latest stable)
-- Tauri dependencies for your platform (see the [Tauri setup guide](https://tauri.app/v1/guides/getting-started/prerequisites))
+- Node.js 18+
+- Rust stable
+- Tauri prerequisites for your OS
 
-### Building and Running
+Install and run:
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/danish-fareed/varlock_ui.git
-   cd varlock_ui
-   ```
-
-2. Install dependencies:
-   ```bash
-   bun install
-   ```
-
-3. Run in development mode:
-   ```bash
-   bun tauri dev
-   ```
-
-### Running Tests
-
-To verify the backend cryptographic and database logic:
 ```bash
-cd src-tauri
-cargo test
+npm install
+npm run tauri dev
+```
+
+Useful checks:
+
+```bash
+npm test -- --run
+npm run build
+```
+
+Rust checks:
+
+```bash
+cargo check --manifest-path src-tauri/Cargo.toml
+cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
 ## License
 
-This project is licensed under the **GNU Affero General Public License v3.0 (AGPLv3)**. 
-See the `LICENSE` file for full details. 
-
-This license allows you to self-deploy and modify the software, but requires that any network-accessible service based on this code must also be open-sourced under the AGPLv3.
+Licensed under GNU Affero General Public License v3.0 (AGPLv3). See `LICENSE`.

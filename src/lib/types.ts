@@ -106,7 +106,7 @@ export interface TerminalSession {
 
 // ── UI view state ──
 
-export type AppView = "dashboard" | "vault" | "commands";
+export type AppView = "dashboard" | "vault" | "commands" | "integrations";
 
 // ── Command discovery types ──
 
