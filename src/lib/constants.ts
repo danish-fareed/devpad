@@ -49,12 +49,42 @@ export const ENV_BADGE_STYLES: Record<string, string> = {
 
 /** Variable type badge colors */
 export const TYPE_BADGE_STYLES: Record<string, string> = {
+  // Network & Web
   url: "bg-accent-light text-accent border border-accent/10",
-  string: "bg-surface-tertiary text-text-secondary border border-border-light",
   port: "bg-success-light text-success-dark border border-success/10",
-  enum: "bg-warning-light text-warning-dark border border-warning/10",
+  ipAddress: "bg-accent-light text-accent-dark border border-accent/10",
+  email: "bg-accent-light text-accent border border-accent/10",
+  
+  // Primitives & General
+  string: "bg-surface-tertiary text-text-secondary border border-border-light",
   number: "bg-surface-tertiary text-text border border-border-light",
   boolean: "bg-success-light text-success-dark border border-success/10",
+  enum: "bg-warning-light text-warning-dark border border-warning/10",
+  
+  // Data formats & Structure
+  json: "bg-surface-tertiary text-text border border-border-light",
+  semver: "bg-surface-tertiary text-text-secondary border border-border-light",
+  uuid: "bg-surface-tertiary text-text-secondary border border-border-light",
+  path: "bg-surface-tertiary text-text-secondary border border-border-light",
+  regex: "bg-surface-tertiary text-text-secondary border border-border-light",
+  
+  // Crypto & Encoding
+  hex: "bg-surface-tertiary text-text-secondary border border-border-light",
+  base64: "bg-surface-tertiary text-text-secondary border border-border-light",
+  md5: "bg-surface-tertiary text-text-secondary border border-border-light",
+  tlsCert: "bg-warning-light text-warning-dark border border-warning/10",
+  tlsKey: "bg-danger-light text-danger-dark border border-danger/10",
+  
+  // Dates & Times
+  duration: "bg-surface-tertiary text-text border border-border-light",
+  isoDate: "bg-surface-tertiary text-text border border-border-light",
+  isoDateTime: "bg-surface-tertiary text-text border border-border-light",
+  
+  // Locales & Media
+  color: "bg-surface-tertiary text-text border border-border-light",
+  country: "bg-surface-tertiary text-text border border-border-light",
+  locale: "bg-surface-tertiary text-text border border-border-light",
+  mimeType: "bg-surface-tertiary text-text border border-border-light",
 };
 
 /** Default environment badge style for unknown environments */

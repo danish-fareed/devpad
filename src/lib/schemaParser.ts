@@ -2,6 +2,9 @@ import type { SchemaEntry, SchemaDecorator, SchemaVarType } from "./types";
 
 const VALID_TYPES: SchemaVarType[] = [
   "string", "url", "port", "number", "boolean", "enum", "email", "path",
+  "ipAddress", "semver", "uuid", "hex", "base64", "md5", "json", "regex",
+  "duration", "isoDate", "isoDateTime", "color", "country", "locale",
+  "mimeType", "tlsCert", "tlsKey"
 ];
 
 const SENSITIVE_KEYWORDS = [
@@ -65,18 +68,41 @@ export function parseSchema(content: string): SchemaEntry[] {
   return entries;
 }
 
+/** Extract root decorators from the global header of the schema */
+export function parseRootDecorators(content: string): SchemaDecorator[] {
+  const lines = content.split(/\r?\n/);
+  const headerComments: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed === "") continue;
+
+    if (trimmed.startsWith("#")) {
+      headerComments.push(trimmed);
+    } else {
+      // Stop at the first real config item (key=value)
+      break;
+    }
+  }
+
+  return parseDecorators(headerComments);
+}
+
 /** Parse decorator comments from a comment block */
-function parseDecorators(comments: string[]): SchemaDecorator[] {
+export function parseDecorators(comments: string[]): SchemaDecorator[] {
   const decorators: SchemaDecorator[] = [];
 
   for (const comment of comments) {
     // Strip leading # and whitespace
     const text = comment.replace(/^#\s*/, "");
+    
     // Match @decorator or @decorator=value or @decorator(value)
-    const decoratorMatch = text.match(/^@(\w+)(?:=(.+)|(\(.*\)))?$/);
-    if (decoratorMatch) {
-      const name = decoratorMatch[1]!;
-      const value = decoratorMatch[2] ?? decoratorMatch[3] ?? null;
+    // Matches multiple times per line
+    const regex = /(?:^|\s)@(\w+)(?:=([^\s()]+)|\(([^)]*)\))?/g;
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      const name = match[1]!;
+      const value = match[2] ?? match[3] ?? null;
       decorators.push({ name, value });
     }
   }
@@ -173,6 +199,26 @@ export function serializeSchemaEntry(entry: SchemaEntry): string {
     lines.push(`# ${entry.description}`);
   }
 
+  const boolDecorators: string[] = [];
+
+  // Required/optional
+  if (!entry.required) {
+    boolDecorators.push("@optional");
+  } else {
+    // Default is required, but explicit decorators are often preferred in generated docs, 
+    // though varlock init might skip them. We'll skip if required is true, for cleaner files unless specified.
+  }
+
+  // Sensitive
+  if (entry.sensitive) {
+    boolDecorators.push("@sensitive");
+  }
+
+  // Output boolean decorators on one line
+  if (boolDecorators.length > 0) {
+    lines.push(`# ${boolDecorators.join(" ")}`);
+  }
+
   // Type decorator (only if not default string)
   if (entry.type !== "string") {
     if (entry.type === "enum" && entry.enumValues.length > 0) {
@@ -180,16 +226,6 @@ export function serializeSchemaEntry(entry: SchemaEntry): string {
     } else {
       lines.push(`# @type=${entry.type}`);
     }
-  }
-
-  // Required/optional
-  if (!entry.required) {
-    lines.push("# @optional");
-  }
-
-  // Sensitive
-  if (entry.sensitive) {
-    lines.push("# @sensitive");
   }
 
   // Key=value

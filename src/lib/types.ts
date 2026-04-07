@@ -272,7 +272,26 @@ export type SchemaVarType =
   | "boolean"
   | "enum"
   | "email"
-  | "path";
+  | "path"
+  | "ipAddress"
+  | "semver"
+  | "uuid"
+  | "hex"
+  | "base64"
+  | "md5"
+  | "json"
+  | "regex"
+  | "duration"
+  | "isoDate"
+  | "isoDateTime"
+  | "color"
+  | "country"
+  | "locale"
+  | "mimeType"
+  | "tlsCert"
+  | "tlsKey"
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  | (string & {});
 
 /** A single decorator parsed from .env.schema comments */
 export interface SchemaDecorator {

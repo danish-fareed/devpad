@@ -10,7 +10,18 @@ interface AddVariableModalProps {
 }
 
 const SCHEMA_TYPES: SchemaVarType[] = [
-  "string", "url", "port", "number", "boolean", "enum", "email", "path",
+  // Primitives
+  "string", "number", "boolean", "enum",
+  // Network & Web
+  "url", "ipAddress", "port", "email",
+  // Data formats
+  "uuid", "json", "semver", "path", "regex", 
+  // Dates & Times
+  "duration", "isoDate", "isoDateTime",
+  // Locales & Media
+  "country", "locale", "color", "mimeType",
+  // Crypto & Encoding
+  "hex", "base64", "md5", "tlsCert", "tlsKey"
 ];
 
 export function AddVariableModal({ activeEnv, onClose, onSave, existingVariables }: AddVariableModalProps) {
